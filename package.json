@@ -6,7 +6,6 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "postbuild": "echo 'Build completed, checking dist folder...' && ls -la dist/",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
@@ -15,7 +14,9 @@
     "create-admin": "ts-node src/scripts/create-admin.ts",
     "populate-products": "ts-node src/scripts/populate-products.ts",
     "test-email": "ts-node src/scripts/test-email.ts",
-    "install-setup": "npm install && npm run build"
+    "install-setup": "npm install && npm run build",
+    "render-build": "npm install && npm run build",
+    "render-start": "node dist/server.js"
   },
   "keywords": [
     "furniture",

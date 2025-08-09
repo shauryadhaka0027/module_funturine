@@ -6,14 +6,14 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "test": "jest",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "init-db": "ts-node src/scripts/init-db.ts",
-    "create-admin": "ts-node src/scripts/create-admin.ts",
-    "populate-products": "ts-node src/scripts/populate-products.ts",
-    "test-email": "ts-node src/scripts/test-email.ts",
+    "lint": "eslint **/*.ts --ignore-pattern node_modules --ignore-pattern dist",
+    "lint:fix": "eslint **/*.ts --fix --ignore-pattern node_modules --ignore-pattern dist",
+    "init-db": "ts-node scripts/init-db.ts",
+    "create-admin": "ts-node scripts/create-admin.ts",
+    "populate-products": "ts-node scripts/populate-products.ts",
+    "test-email": "ts-node scripts/test-email.ts",
     "install-setup": "npm install && npm run build",
     "render-build": "npm install && npm run build",
     "render-start": "node dist/server.js"
@@ -37,7 +37,7 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.7",
-    "crypto": "^1.0.1",
+
     "express-validator": "^7.0.1"
   },
   "devDependencies": {

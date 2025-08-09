@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
+    "postbuild": "echo 'Build completed, checking dist folder...' && ls -la dist/",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",

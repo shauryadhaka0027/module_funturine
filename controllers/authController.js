@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Dealer from '../models/Dealer.js';
@@ -6,10 +5,9 @@ import Admin from '../models/Admin.js';
 import { generateToken } from '../utils/jwt.js';
 import { sendDealerRegistrationEmail, sendPasswordResetEmail } from '../services/emailService.js';
 import { generateOTPWithExpiration, sendSMSOTP, sendEmailOTP, verifyOTP } from '../services/otpService.js';
-import { AuthRequest, IDealer, IAdmin, JWTPayload } from '../types/index.js';
 
 // Dealer Registration (Simplified - no OTP)
-export const registerDealer = async (req: Request, res: Response): Promise<void> => {
+export const registerDealer = async (req, res) => {
   try {
     const { companyName, contactPersonName, mobile, email, address, gst, password } = req.body;
 
@@ -48,14 +46,14 @@ export const registerDealer = async (req: Request, res: Response): Promise<void>
       dealer: dealer.getPublicProfile()
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Dealer registration error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Dealer Registration Step 1 - Send OTPs
-export const registerDealerStep1 = async (req: Request, res: Response): Promise<void> => {
+export const registerDealerStep1 = async (req, res) => {
   try {
     const { companyName, contactPersonName, mobile, email, address, gst, password } = req.body;
 
@@ -98,23 +96,25 @@ export const registerDealerStep1 = async (req: Request, res: Response): Promise<
 
     if (!smsSent || !emailSent) {
       await Dealer.findByIdAndDelete(dealer._id);
-      res.status(500).json({ message: 'Failed to send OTPs. Please try again.' });
+      res.status(500).json({ 
+        message: 'Failed to send OTP. Please try again.' 
+      });
       return;
     }
 
     res.status(201).json({
-      message: 'OTPs sent successfully. Please verify your mobile and email.',
+      message: 'OTPs sent successfully. Please check your email and mobile.',
       dealerId: dealer._id
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Dealer registration step 1 error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Dealer Registration Step 2 - Verify OTPs
-export const registerDealerStep2 = async (req: Request, res: Response): Promise<void> => {
+export const registerDealerStep2 = async (req, res) => {
   try {
     const { dealerId, mobileOtp, emailOtp } = req.body;
 
@@ -124,23 +124,19 @@ export const registerDealerStep2 = async (req: Request, res: Response): Promise<
       return;
     }
 
-    // Verify mobile OTP
-    const isMobileOtpValid = verifyOTP(dealer.mobileOtp!, mobileOtp, dealer.mobileOtpExpires!);
-    if (!isMobileOtpValid) {
-      res.status(400).json({ message: 'Invalid or expired mobile OTP' });
+    // Verify OTPs
+    const mobileVerified = await verifyOTP(mobileOtp, dealer.mobileOtp, dealer.mobileOtpExpires);
+    const emailVerified = await verifyOTP(emailOtp, dealer.emailOtp, dealer.emailOtpExpires);
+
+    if (!mobileVerified || !emailVerified) {
+      res.status(400).json({ message: 'Invalid or expired OTP' });
       return;
     }
 
-    // Verify email OTP
-    const isEmailOtpValid = verifyOTP(dealer.emailOtp!, emailOtp, dealer.emailOtpExpires!);
-    if (!isEmailOtpValid) {
-      res.status(400).json({ message: 'Invalid or expired email OTP' });
-      return;
-    }
-
-    // Mark as verified
+    // Update dealer status
     dealer.isMobileVerified = true;
     dealer.isEmailVerified = true;
+    dealer.status = 'pending';
     dealer.mobileOtp = undefined;
     dealer.mobileOtpExpires = undefined;
     dealer.emailOtp = undefined;
@@ -148,22 +144,19 @@ export const registerDealerStep2 = async (req: Request, res: Response): Promise<
 
     await dealer.save();
 
-    // Send registration confirmation email
-    await sendDealerRegistrationEmail(dealer);
-
     res.json({
-      message: 'Registration successful. Please wait for admin approval.',
+      message: 'Registration completed successfully. Please wait for admin approval.',
       dealer: dealer.getPublicProfile()
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Dealer registration step 2 error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Resend OTP
-export const resendOTP = async (req: Request, res: Response): Promise<void> => {
+export const resendOTP = async (req, res) => {
   try {
     const { dealerId, type } = req.body; // type: 'mobile' or 'email'
 
@@ -179,7 +172,7 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
       dealer.mobileOtp = otpData.otp;
       dealer.mobileOtpExpires = otpData.expiresAt;
       await dealer.save();
-
+      
       const smsSent = await sendSMSOTP(dealer.mobile, otpData.otp);
       if (!smsSent) {
         res.status(500).json({ message: 'Failed to send SMS OTP' });
@@ -189,7 +182,7 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
       dealer.emailOtp = otpData.otp;
       dealer.emailOtpExpires = otpData.expiresAt;
       await dealer.save();
-
+      
       const emailSent = await sendEmailOTP(dealer.email, otpData.otp, dealer.companyName);
       if (!emailSent) {
         res.status(500).json({ message: 'Failed to send email OTP' });
@@ -199,31 +192,29 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
 
     res.json({ message: 'OTP resent successfully' });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Resend OTP error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Dealer Login
-export const loginDealer = async (req: Request, res: Response): Promise<void> => {
+export const loginDealer = async (req, res) => {
   try {
-    const { gst, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!gst || !password) {
-      res.status(400).json({ message: 'GST number and password are required' });
-      return;
-    }
-
-    // Find dealer by GST
-    const dealer = await Dealer.findOne({ gst });
-
+    const dealer = await Dealer.findOne({ email }).select('+password');
     if (!dealer) {
-      res.status(401).json({ message: 'Invalid GST number or password' });
+      res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
-    // Check if account is approved
+    const isPasswordValid = await dealer.comparePassword(password);
+    if (!isPasswordValid) {
+      res.status(401).json({ message: 'Invalid credentials' });
+      return;
+    }
+
     if (dealer.status !== 'approved') {
       res.status(403).json({ 
         message: 'Account not approved. Please wait for admin approval.',
@@ -232,36 +223,21 @@ export const loginDealer = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Check if account is active
-    if (!dealer.isActive) {
-      res.status(403).json({ message: 'Account is deactivated' });
-      return;
-    }
-
-    // Check if mobile and email are verified
     if (!dealer.isMobileVerified || !dealer.isEmailVerified) {
       res.status(403).json({ 
-        message: 'Please complete mobile and email verification first' 
+        message: 'Please complete OTP verification first.',
+        needsVerification: true,
+        dealerId: dealer._id
       });
       return;
     }
 
-    // Verify password
-    const isPasswordValid = await dealer.comparePassword(password);
-    
-    if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid GST number or password' });
-      return;
-    }
-
-    // Generate token
-    const token = generateToken(dealer._id);
-
-    // Update first time user status
-    if (dealer.isFirstTimeUser) {
-      dealer.isFirstTimeUser = false;
-      await dealer.save();
-    }
+    // Generate JWT token
+    const token = generateToken({
+      id: dealer._id,
+      email: dealer.email,
+      role: 'dealer'
+    });
 
     res.json({
       message: 'Login successful',
@@ -269,45 +245,35 @@ export const loginDealer = async (req: Request, res: Response): Promise<void> =>
       dealer: dealer.getPublicProfile()
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Dealer login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Admin Login
-export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
+export const loginAdmin = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !password) {
-      res.status(400).json({ message: 'Username and password are required' });
-      return;
-    }
-
-    // Find admin by username
-    const admin = await Admin.findOne({ username });
-
+    const admin = await Admin.findOne({ email }).select('+password');
     if (!admin) {
-      res.status(401).json({ message: 'Invalid username or password' });
+      res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
-    // Check if account is active
-    if (!admin.isActive) {
-      res.status(403).json({ message: 'Account is deactivated' });
-      return;
-    }
-
-    // Verify password
     const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid username or password' });
+      res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
 
-    // Generate token
-    const token = generateToken(admin._id);
+    // Generate JWT token
+    const token = generateToken({
+      id: admin._id,
+      email: admin.email,
+      role: 'admin'
+    });
 
     res.json({
       message: 'Login successful',
@@ -317,18 +283,18 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 
   } catch (error) {
     console.error('Admin login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Forgot Password
-export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+export const forgotPassword = async (req, res) => {
   try {
-    const { gst } = req.body;
+    const { email } = req.body;
 
-    const dealer = await Dealer.findOne({ gst });
+    const dealer = await Dealer.findOne({ email });
     if (!dealer) {
-      res.status(404).json({ message: 'No account found with this GST number' });
+      res.status(404).json({ message: 'Dealer not found' });
       return;
     }
 
@@ -336,27 +302,32 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     const resetToken = crypto.randomBytes(32).toString('hex');
     dealer.resetPasswordToken = resetToken;
     dealer.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+
     await dealer.save();
 
-    // Send password reset email
-    await sendPasswordResetEmail(dealer.email, resetToken);
+    // Send reset email
+    const emailSent = await sendPasswordResetEmail(email, resetToken, dealer.companyName);
+    if (!emailSent) {
+      res.status(500).json({ message: 'Failed to send reset email' });
+      return;
+    }
 
-    res.json({ message: 'Password reset email sent' });
+    res.json({ message: 'Password reset email sent successfully' });
 
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Reset Password
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
     const dealer = await Dealer.findOne({
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() }
+      resetPasswordExpires: { $gt: Date.now() }
     });
 
     if (!dealer) {
@@ -364,42 +335,51 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Update password
     dealer.password = newPassword;
     dealer.resetPasswordToken = undefined;
     dealer.resetPasswordExpires = undefined;
+
     await dealer.save();
 
-    res.json({ message: 'Password reset successful' });
+    res.json({ message: 'Password reset successfully' });
 
   } catch (error) {
     console.error('Reset password error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 // Get Profile
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
+export const getProfile = async (req, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
-    const user = await Dealer.findById(decoded.userId) || await Admin.findById(decoded.userId);
-
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    if (decoded.role === 'dealer') {
+      const dealer = await Dealer.findById(decoded.id);
+      if (!dealer) {
+        res.status(404).json({ message: 'Dealer not found' });
+        return;
+      }
+      res.json({ dealer: dealer.getPublicProfile() });
+    } else if (decoded.role === 'admin') {
+      const admin = await Admin.findById(decoded.id);
+      if (!admin) {
+        res.status(404).json({ message: 'Admin not found' });
+        return;
+      }
+      res.json({ admin: admin.getPublicProfile() });
+    } else {
+      res.status(401).json({ message: 'Invalid token' });
     }
-
-    res.json({ user: user.getPublicProfile() });
 
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

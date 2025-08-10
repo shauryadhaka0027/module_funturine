@@ -1,12 +1,10 @@
-import { Request, Response } from 'express';
 import Dealer from '../models/Dealer.js';
 import Enquiry from '../models/Enquiry.js';
-import { AuthRequest } from '../types/index.js';
 
 // Get dealer profile
-export const getDealerProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerProfile = async (req, res) => {
   try {
-    res.json({ dealer: req.dealer!.getPublicProfile() });
+    res.json({ dealer: req.dealer.getPublicProfile() });
   } catch (error) {
     console.error('Get dealer profile error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -14,10 +12,10 @@ export const getDealerProfile = async (req: AuthRequest, res: Response): Promise
 };
 
 // Update dealer profile
-export const updateDealerProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateDealerProfile = async (req, res) => {
   try {
     const { companyName, contactPersonName, mobile, address } = req.body;
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
 
     // Update allowed fields
     if (companyName) dealer.companyName = companyName;
@@ -39,10 +37,10 @@ export const updateDealerProfile = async (req: AuthRequest, res: Response): Prom
 };
 
 // Change password
-export const changeDealerPassword = async (req: AuthRequest, res: Response): Promise<void> => {
+export const changeDealerPassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
 
     // Verify current password
     const isCurrentPasswordValid = await dealer.comparePassword(currentPassword);
@@ -64,9 +62,9 @@ export const changeDealerPassword = async (req: AuthRequest, res: Response): Pro
 };
 
 // Get dealer dashboard stats
-export const getDealerDashboard = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerDashboard = async (req, res) => {
   try {
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
     
     // Get enquiry statistics
     const totalEnquiries = await Enquiry.countDocuments({ dealer: dealer._id });
@@ -106,12 +104,12 @@ export const getDealerDashboard = async (req: AuthRequest, res: Response): Promi
 };
 
 // Get dealer enquiries
-export const getDealerEnquiries = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerEnquiries = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query as { page?: number; limit?: number; status?: string };
-    const dealer = req.dealer!;
+    const { page = 1, limit = 10, status } = req.query;
+    const dealer = req.dealer;
     
-    const query: any = { dealer: dealer._id };
+    const query = { dealer: dealer._id };
     if (status) {
       query.status = status;
     }
@@ -139,10 +137,10 @@ export const getDealerEnquiries = async (req: AuthRequest, res: Response): Promi
 };
 
 // Get dealer enquiry by ID
-export const getDealerEnquiryById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerEnquiryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
     
     const enquiry = await Enquiry.findOne({ _id: id, dealer: dealer._id })
       .populate('product', 'productCode productName category price colors images');

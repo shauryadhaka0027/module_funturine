@@ -5,11 +5,11 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 // Import routes
-import authRoutes from './routes/auth.js';
-import dealerRoutes from './routes/dealers.js';
-import enquiryRoutes from './routes/enquiries.js';
-import productRoutes from './routes/products.js';
-import adminRoutes from './routes/admin.js';
+import authRoutes from './routes/';
+import dealerRoutes from './routes/dealers';
+import enquiryRoutes from './routes/enquiries';
+import productRoutes from './routes/products';
+import adminRoutes from './routes/admin';
 
 // Load environment variables
 dotenv.config();

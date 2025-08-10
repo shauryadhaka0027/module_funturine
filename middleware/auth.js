@@ -1,10 +1,8 @@
 import jwt from 'jsonwebtoken';
-import { Request, Response, NextFunction } from 'express';
 import Dealer from '../models/Dealer.js';
 import Admin from '../models/Admin.js';
-import { AuthRequest, IDealer, IAdmin, JWTPayload } from '../types/index.js';
 
-export const auth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const auth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -13,7 +11,7 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as JWTPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
     
     // Check if user exists and is active
     const user = await Dealer.findById(decoded.userId) || await Admin.findById(decoded.userId);
@@ -24,14 +22,14 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction):
     }
 
     req.user = user;
-    req.userType = (user as any).constructor.name.toLowerCase() as 'dealer' | 'admin';
+    req.userType = user.constructor.name.toLowerCase();
     next();
   } catch (error) {
     res.status(401).json({ message: 'Invalid token.' });
   }
 };
 
-export const dealerAuth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const dealerAuth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -40,7 +38,7 @@ export const dealerAuth = async (req: AuthRequest, res: Response, next: NextFunc
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as JWTPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
     const dealer = await Dealer.findById(decoded.userId);
     
     if (!dealer || !dealer.isActive) {
@@ -60,7 +58,7 @@ export const dealerAuth = async (req: AuthRequest, res: Response, next: NextFunc
   }
 };
 
-export const adminAuth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+export const adminAuth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -69,7 +67,7 @@ export const adminAuth = async (req: AuthRequest, res: Response, next: NextFunct
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as JWTPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
     const admin = await Admin.findById(decoded.userId);
     
     if (!admin || !admin.isActive) {

@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 // Import routes
-import authRoutes from './routes/';
+import authRoutes from './routes/auth';
 import dealerRoutes from './routes/dealers';
 import enquiryRoutes from './routes/enquiries';
 import productRoutes from './routes/products';

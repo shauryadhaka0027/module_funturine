@@ -1,7 +1,6 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
@@ -15,12 +14,10 @@ import adminRoutes from './routes/admin.js';
 // Load environment variables
 dotenv.config();
 
-const app: Application = express();
-const PORT: number = parseInt(process.env.PORT || '5000', 10);
+const app = express();
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Middleware
-
-
 app.use(cors({
   origin: true, // Allow all origins
   credentials: true,
@@ -32,7 +29,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Debug middleware to log all requests
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   console.log('Request headers:', req.headers);
   if (req.body && Object.keys(req.body).length > 0) {
@@ -50,7 +47,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // MongoDB Connection
-const connectDB = async (): Promise<void> => {
+const connectDB = async () => {
   try {
     await mongoose.connect(
       process.env.MONGODB_URI || 'mongodb://localhost:27017/moulded-furniture'
@@ -73,7 +70,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req: Request, res: Response) => {
+app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Moulded Furniture API is running',
@@ -83,7 +80,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // Test endpoint for debugging
-app.post('/api/test-enquiry', (req: Request, res: Response) => {
+app.post('/api/test-enquiry', (req, res) => {
   console.log('=== TEST ENQUIRY ENDPOINT ===');
   console.log('Headers:', req.headers);
   console.log('Body:', req.body);
@@ -98,12 +95,7 @@ app.post('/api/test-enquiry', (req: Request, res: Response) => {
 });
 
 // Error handling middleware
-interface ErrorWithMessage {
-  message: string;
-  stack?: string;
-}
-
-app.use((err: ErrorWithMessage, req: Request, res: Response, next: NextFunction) => {
+app.use((err, req, res, next) => {
   console.error('Error middleware caught:', err);
   console.error('Error stack:', err.stack);
   res.status(500).json({ 
@@ -114,7 +106,7 @@ app.use((err: ErrorWithMessage, req: Request, res: Response, next: NextFunction)
 });
 
 // 404 handler
-app.use('*', (req: Request, res: Response) => {
+app.use('*', (req, res) => {
   res.status(404).json({ 
     message: 'Route not found',
     path: req.originalUrl,

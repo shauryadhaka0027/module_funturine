@@ -3,7 +3,7 @@ services:
     name: module-funturine-api
     env: node
     buildCommand: npm install
-    startCommand: node src/server.js
+    startCommand: npm start
     plan: free
     branch: main
     healthCheckPath: /api/health

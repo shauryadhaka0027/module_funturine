@@ -12,8 +12,8 @@ import {
   getAllAdmins,
   updateAdmin,
   changeAdminPassword
-} from '../controllers/adminController';
-import { adminAuth } from '../middleware/auth';
+} from '../controllers/adminController.js';
+import { adminAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 

@@ -6,12 +6,11 @@ import Product from '../models/Product';
 // Load environment variables
 dotenv.config();
 
-const initializeDatabase = async (): Promise<void> => {
+const initializeDatabase = async () {
   try {
     // Connect to MongoDB
     await mongoose.connect(
-      process.env.MONGODB_URI || 'mongodb://localhost:27017/moulded-furniture'
-    );
+      process.env.MONGODB_URI || 'mongodb);
     console.log('Connected to MongoDB');
 
     // Create indexes
@@ -26,15 +25,14 @@ const initializeDatabase = async (): Promise<void> => {
     console.log('✓ Product indexes created');
 
     // Create super admin if not exists
-    const existingSuperAdmin = await Admin.findOne({ role: 'super_admin' });
+    const existingSuperAdmin = await Admin.findOne({ role };
     
     if (!existingSuperAdmin) {
       const superAdmin = new Admin({
-        username: 'superadmin',
-        email: 'admin@mouldedfurniture.com',
-        password: 'Admin@123',
-        role: 'super_admin'
-      });
+        username,
+        email,
+        password,
+        role);
 
       await superAdmin.save();
       console.log('✓ Super admin created');
@@ -43,12 +41,12 @@ const initializeDatabase = async (): Promise<void> => {
     }
 
     console.log('\n🎉 Database initialization completed successfully!');
-    console.log('\nAdmin credentials:');
-    console.log('Username: superadmin');
-    console.log('Password: Admin@123');
+    console.log('\nAdmin credentials);
+    console.log('Username);
+    console.log('Password);
 
   } catch (error) {
-    console.error('❌ Error initializing database:', error);
+    console.error('❌ Error initializing database, error);
   } finally {
     await mongoose.disconnect();
     console.log('\nDisconnected from MongoDB');

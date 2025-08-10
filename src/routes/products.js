@@ -9,9 +9,9 @@ import {
   updateProduct,
   deleteProduct,
   getAdminProducts
-} from '../controllers/productController';
-import { adminAuth } from '../middleware/auth';
-import { validateProductCreation } from '../middleware/validation';
+} from '../controllers/productController.js';
+import { adminAuth } from '../middleware/auth.js';
+import { validateProductCreation } from '../middleware/validation.js';
 
 const router = express.Router();
 

@@ -1,5 +1,24 @@
-import { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
+
+// Handle validation errors
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  
+  if (!errors.isEmpty()) {
+    const formattedErrors = errors.array().map(error => ({
+      field: error.path,
+      message: error.msg
+    }));
+    
+    res.status(400).json({
+      message: "Validation failed",
+      errors: formattedErrors
+    });
+    return;
+  }
+  
+  next();
+};
 
 // Validation middleware for dealer registration
 export const validateDealerRegistration = [
@@ -92,28 +111,23 @@ export const validateProductCreation = [
   body('category')
     .notEmpty()
     .withMessage('Product category is required')
-    .isIn(['Chair', 'Table', 'Kids Chair & Table', 'Set of Table & Chair', '3 Year Warranty Chair'])
+    .isIn(['Chair', 'Table', "Kids Chair & Table", "Set of Table & Chair", '3 Year Warranty Chair'])
     .withMessage('Please select a valid category'),
   
   body('price')
     .isNumeric()
     .withMessage('Price must be a number')
     .custom((value) => {
-      if (value < 0) {
-        throw new Error('Price cannot be negative');
+      if (value <= 0) {
+        throw new Error('Price must be greater than 0');
       }
       return true;
     }),
   
-  body('colors')
+  body('stockQuantity')
     .optional()
-    .isArray()
-    .withMessage('Colors must be an array'),
-  
-  body('images')
-    .optional()
-    .isArray()
-    .withMessage('Images must be an array'),
+    .isInt({ min: 0 })
+    .withMessage('Stock quantity must be a non-negative integer'),
   
   handleValidationErrors
 ];
@@ -124,50 +138,21 @@ export const validateEnquiryCreation = [
     .notEmpty()
     .withMessage('Product ID is required')
     .isMongoId()
-    .withMessage('Please provide a valid product ID'),
-  
-  body('productColor')
-    .notEmpty()
-    .withMessage('Product color is required'),
+    .withMessage('Invalid product ID'),
   
   body('quantity')
     .isInt({ min: 1 })
-    .withMessage('Quantity must be a positive integer'),
+    .withMessage('Quantity must be at least 1'),
   
   body('price')
     .isNumeric()
     .withMessage('Price must be a number')
     .custom((value) => {
-      if (value < 0) {
-        throw new Error('Price cannot be negative');
+      if (value <= 0) {
+        throw new Error('Price must be greater than 0');
       }
       return true;
     }),
   
-  body('remarks')
-    .optional()
-    .isLength({ max: 500 })
-    .withMessage('Remarks cannot exceed 500 characters'),
-  
   handleValidationErrors
 ];
-
-// Handle validation errors
-function handleValidationErrors(req: Request, res: Response, next: NextFunction): void {
-  const errors = validationResult(req);
-  
-  if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => ({
-      field: error.type === 'field' ? (error as any).path : 'unknown',
-      message: error.msg
-    }));
-    
-    res.status(400).json({
-      message: 'Validation failed',
-      errors: errorMessages
-    });
-    return;
-  }
-  
-  next();
-}

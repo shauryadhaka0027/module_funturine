@@ -6,8 +6,8 @@ import {
   getDealerDashboard,
   getDealerEnquiries,
   getDealerEnquiryById
-} from '../controllers/dealerController';
-import { dealerAuth } from '../middleware/auth';
+} from '../controllers/dealerController.js';
+import { dealerAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 

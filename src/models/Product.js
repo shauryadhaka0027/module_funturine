@@ -1,7 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
-import { IProduct } from '../types/index';
 
-const productSchema = new Schema<IProduct>({
+const productSchema = new Schema({
   productCode: {
     type: String,
     required: [true, 'Product code is required'],
@@ -17,10 +16,10 @@ const productSchema = new Schema<IProduct>({
     type: String,
     required: [true, 'Product category is required'],
     enum: [
-      'Chair',
+      'Chair', 
       'Table', 
-      'Kids Chair & Table',
-      'Set of Table & Chair',
+      "Kids Chair & Table",
+      "Set of Table & Chair",
       '3 Year Warranty Chair'
     ]
   },
@@ -33,20 +32,20 @@ const productSchema = new Schema<IProduct>({
     required: [true, 'Product price is required'],
     min: [0, 'Price cannot be negative']
   },
-  colors: [{
-    type: String,
+  colors: {
+    type: [String],
     trim: true
-  }],
-  images: [{
-    type: String
-  }],
+  },
+  images: {
+    type: [String]
+  },
   specifications: {
     type: Map,
     of: String
   },
   warranty: {
     type: String,
-    default: '3 Year Warranty'
+    default: '1 Year'
   },
   isActive: {
     type: Boolean,
@@ -62,13 +61,11 @@ const productSchema = new Schema<IProduct>({
     ref: 'Admin',
     required: true
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Index for better search performance
 productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ productCode: 1 });
-productSchema.index({ productName: 'text' });
+productSchema.index({ productName: 1 });
 
-export default mongoose.model<IProduct>('Product', productSchema);
+export default mongoose.model('Product', productSchema);

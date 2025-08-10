@@ -10,9 +10,9 @@ import {
   approveEnquiry,
   rejectEnquiry,
   getEnquiryStatistics
-} from '../controllers/enquiryController';
-import { dealerAuth, adminAuth } from '../middleware/auth';
-import { validateEnquiryCreation } from '../middleware/validation';
+} from '../controllers/enquiryController.js';
+import { dealerAuth, adminAuth } from '../middleware/auth.js';
+import { validateEnquiryCreation } from '../middleware/validation.js';
 
 const router = express.Router();
 

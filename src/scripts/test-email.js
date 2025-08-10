@@ -4,31 +4,31 @@ import { sendDealerRegistrationEmail } from '../services/emailService';
 // Load environment variables
 dotenv.config();
 
-const testEmail = async (): Promise<void> => {
+const testEmail = async () {
   try {
     // Check if email configuration is set
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.error('❌ Email configuration missing!');
-      console.log('Please set the following environment variables:');
-      console.log('- SMTP_USER: Your email address');
-      console.log('- SMTP_PASS: Your email app password');
+      console.log('Please set the following environment variables);
+      console.log('- SMTP_USER);
+      console.log('- SMTP_PASS);
       process.exit(1);
     }
 
     console.log('Testing email service...');
-    console.log('SMTP Host:', process.env.SMTP_HOST || 'smtp.gmail.com');
-    console.log('SMTP Port:', process.env.SMTP_PORT || '587');
-    console.log('SMTP User:', process.env.SMTP_USER);
+    console.log('SMTP Host, process.env.SMTP_HOST || 'smtp.gmail.com');
+    console.log('SMTP Port, process.env.SMTP_PORT || '587');
+    console.log('SMTP User, process.env.SMTP_USER);
 
     // Mock dealer object for testing
     const mockDealer = {
-      companyName: 'Test Company Ltd.',
-      contactPersonName: 'John Doe',
-      email: process.env.SMTP_USER, // Send test email to yourself
-      mobile: '9876543210',
-      gst: '27AAAAA0000A1Z5',
-      address: '123 Test Street, Test City'
-    } as any;
+      companyName,
+      contactPersonName,
+      email, // Send test email to yourself
+      mobile,
+      gst,
+      address, Test City'
+    } ;
 
     console.log('\nSending test email...');
     const emailSent = await sendDealerRegistrationEmail(mockDealer);
@@ -41,7 +41,7 @@ const testEmail = async (): Promise<void> => {
     }
 
   } catch (error) {
-    console.error('❌ Error testing email:', error);
+    console.error('❌ Error testing email, error);
   }
 };
 

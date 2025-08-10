@@ -1,9 +1,7 @@
-import { Request, Response } from 'express';
-import Product from '../models/Product';
-import { AuthRequest, ProductQuery } from '../types/index';
+import Product from '../models/Product.js';
 
 // Get all products (public - for visitors and dealers)
-export const getProducts = async (req: Request, res: Response): Promise<void> => {
+export const getProducts = async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -12,11 +10,9 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       search, 
       sortBy = 'createdAt',
       sortOrder = 'desc'
-    } = req.query as ProductQuery;
+    } = req.query;
 
-    const query: any = { isActive: true };
-    
-    // Filter by category
+    const query = { isActive: true };
     if (category) {
       query.category = category;
     }
@@ -30,7 +26,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       ];
     }
 
-    const sortOptions: any = {};
+    const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const products = await Product.find(query)
@@ -55,12 +51,12 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
 
   } catch (error) {
     console.error('Get products error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get product by ID (public)
-export const getProductById = async (req: Request, res: Response): Promise<void> => {
+export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -69,7 +65,7 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
       .exec();
 
     if (!product || !product.isActive) {
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: "Product not found" });
       return;
     }
 
@@ -77,22 +73,22 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 
   } catch (error) {
     console.error('Get product error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get products by category
-export const getProductsByCategory = async (req: Request, res: Response): Promise<void> => {
+export const getProductsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
-    const { page = 1, limit = 12, sortBy = 'createdAt', sortOrder = 'desc' } = req.query as ProductQuery;
+    const { page = 1, limit = 12, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-    const query: any = { 
-      category: category,
-      isActive: true 
+    const query = { 
+      category,
+      isActive: true
     };
 
-    const sortOptions: any = {};
+    const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const products = await Product.find(query)
@@ -114,17 +110,17 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
 
   } catch (error) {
     console.error('Get products by category error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Search products
-export const searchProducts = async (req: Request, res: Response): Promise<void> => {
+export const searchProducts = async (req, res) => {
   try {
     const { query } = req.params;
-    const { page = 1, limit = 12 } = req.query as ProductQuery;
+    const { page = 1, limit = 12 } = req.query;
 
-    const searchQuery: any = {
+    const searchQuery = {
       isActive: true,
       $or: [
         { productName: { $regex: query, $options: 'i' } },
@@ -153,12 +149,12 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
 
   } catch (error) {
     console.error('Search products error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get product categories
-export const getCategories = async (req: Request, res: Response): Promise<void> => {
+export const getCategories = async (req, res) => {
   try {
     const categories = await Product.distinct('category', { isActive: true });
     
@@ -166,14 +162,14 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
 
   } catch (error) {
     console.error('Get categories error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Admin routes for product management
 
 // Create new product (admin only)
-export const createProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createProduct = async (req, res) => {
   try {
     const {
       productCode,
@@ -191,7 +187,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
     // Check if product code already exists
     const existingProduct = await Product.findOne({ productCode });
     if (existingProduct) {
-      res.status(400).json({ message: 'Product code already exists' });
+      res.status(400).json({ message: "Product code already exists" });
       return;
     }
 
@@ -201,67 +197,67 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       category,
       description,
       price,
-      colors: colors || [],
-      images: images || [],
-      specifications: specifications || {},
+      colors,
+      images,
+      specifications,
       warranty,
-      stockQuantity: stockQuantity || 0,
-      createdBy: req.admin!._id
+      stockQuantity,
+      createdBy: req.admin._id
     });
 
     await product.save();
 
     res.status(201).json({
-      message: 'Product created successfully',
+      message: "Operation successful",
       product
     });
 
   } catch (error) {
     console.error('Create product error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Update product (admin only)
-export const updateProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
     const product = await Product.findById(id);
     if (!product) {
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: "Product not found" });
       return;
     }
 
     // Update product fields
     Object.keys(updateData).forEach(key => {
       if (key !== 'createdBy' && key !== '_id') {
-        (product as any)[key] = updateData[key];
+        (product )[key] = updateData[key];
       }
     });
 
     await product.save();
 
     res.json({
-      message: 'Product updated successfully',
+      message: "Operation successful",
       product
     });
 
   } catch (error) {
     console.error('Update product error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Delete product (admin only)
-export const deleteProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
     const product = await Product.findById(id);
     if (!product) {
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: "Product not found" });
       return;
     }
 
@@ -269,20 +265,20 @@ export const deleteProduct = async (req: AuthRequest, res: Response): Promise<vo
     product.isActive = false;
     await product.save();
 
-    res.json({ message: 'Product deleted successfully' });
+    res.json({ message: "Product deleted successfully" });
 
   } catch (error) {
     console.error('Delete product error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get all products for admin (including inactive)
-export const getAdminProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAdminProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 20, category, status } = req.query as any;
+    const { page = 1, limit = 20, category, status } = req.query;
 
-    const query: any = {};
+    const query = {};
     
     if (category) {
       query.category = category;
@@ -310,6 +306,6 @@ export const getAdminProducts = async (req: AuthRequest, res: Response): Promise
 
   } catch (error) {
     console.error('Get admin products error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

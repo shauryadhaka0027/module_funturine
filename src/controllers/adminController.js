@@ -1,19 +1,17 @@
-import { Request, Response } from 'express';
-import Dealer from '../models/Dealer';
-import Admin from '../models/Admin';
-import Product from '../models/Product';
-import Enquiry from '../models/Enquiry';
-import { sendDealerApprovalEmail, sendDealerRejectionEmail } from '../services/emailService';
-import { generateToken } from '../utils/jwt';
-import { AuthRequest, DashboardStats, DealerQuery } from '../types/index';
+import Dealer from '../models/Dealer.js';
+import Admin from '../models/Admin.js';
+import Product from '../models/Product.js';
+import Enquiry from '../models/Enquiry.js';
+import { sendDealerApprovalEmail, sendDealerRejectionEmail } from '../services/emailService.js';
+import { generateToken } from '../utils/jwt.js';
 
 // Admin Login
-export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
+export const loginAdmin = async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      res.status(400).json({ message: 'Username and password are required' });
+      res.status(400).json({ message: "Username and password are required" });
       return;
     }
 
@@ -21,20 +19,20 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
     const admin = await Admin.findOne({ username });
 
     if (!admin) {
-      res.status(401).json({ message: 'Invalid username or password' });
+      res.status(400).json({ message: "Invalid credentials" });
       return;
     }
 
     // Check if account is active
     if (!admin.isActive) {
-      res.status(403).json({ message: 'Account is deactivated' });
+      res.status(400).json({ message: "Account is inactive" });
       return;
     }
 
     // Verify password
     const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid username or password' });
+      res.status(400).json({ message: "Invalid password" });
       return;
     }
 
@@ -42,19 +40,19 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
     const token = generateToken(admin._id);
 
     res.json({
-      message: 'Login successful',
+      message: "Operation successful",
       token,
-      admin: admin.getPublicProfile()
+      admin
     });
 
   } catch (error) {
     console.error('Admin login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get admin dashboard statistics
-export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDashboardStats = async (req, res) => {
   try {
     // Get dealer statistics
     const totalDealers = await Dealer.countDocuments();
@@ -70,7 +68,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     // Get enquiry statistics
     const totalEnquiries = await Enquiry.countDocuments();
     const pendingEnquiries = await Enquiry.countDocuments({ status: 'pending' });
-    const underProcessEnquiries = await Enquiry.countDocuments({ status: 'under_process' });
+    const underProcessEnquiries = await Enquiry.countDocuments({ status: 'under-process' });
     const approvedEnquiries = await Enquiry.countDocuments({ status: 'approved' });
     const rejectedEnquiries = await Enquiry.countDocuments({ status: 'rejected' });
     const closedEnquiries = await Enquiry.countDocuments({ status: 'closed' });
@@ -88,7 +86,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       .limit(5)
       .select('productCode productName quantity status createdAt');
 
-    const dashboardStats: DashboardStats = {
+    const dashboardStats = {
       dealers: {
         total: totalDealers,
         pending: pendingDealers,
@@ -116,23 +114,23 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 
   } catch (error) {
     console.error('Get admin dashboard error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get all dealers (admin only)
-export const getAllDealers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllDealers = async (req, res) => {
   try {
     const { 
       page = 1, 
       limit = 20, 
-      status, 
+      status = 'pending', 
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc'
-    } = req.query as DealerQuery;
+    } = req.query;
 
-    const query: any = {};
+    const query = {};
     
     if (status) {
       query.status = status;
@@ -147,7 +145,7 @@ export const getAllDealers = async (req: AuthRequest, res: Response): Promise<vo
       ];
     }
 
-    const sortOptions: any = {};
+    const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const dealers = await Dealer.find(query)
@@ -168,49 +166,49 @@ export const getAllDealers = async (req: AuthRequest, res: Response): Promise<vo
 
   } catch (error) {
     console.error('Get dealers error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get dealer by ID (admin only)
-export const getDealerById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const dealer = await Dealer.findById(id).select('-password');
     if (!dealer) {
-      res.status(404).json({ message: 'Dealer not found' });
+      res.status(404).json({ message: "Dealer not found" });
       return;
     }
 
     // Get dealer's enquiries
-    const enquiries = await Enquiry.find({ dealer: id })
+    const enquiries = await Enquiry.find({ dealer: dealer._id })
       .populate('product', 'productCode productName category')
       .sort({ createdAt: -1 })
       .limit(10);
 
     res.json({ dealer, enquiries });
 
-  } catch (error) {
+  } catch (error) { 
     console.error('Get dealer error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Approve dealer (admin only)
-export const approveDealer = async (req: AuthRequest, res: Response): Promise<void> => {
+export const approveDealer = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const dealer = await Dealer.findById(id);
     if (!dealer) {
-      res.status(404).json({ message: 'Dealer not found' });
+      res.status(404).json({ message: "Dealer not found" });
       return;
     }
 
     if (dealer.status === 'approved') {
-      res.status(400).json({ message: 'Dealer is already approved' });
+      res.status(400).json({ message: "Dealer is already approved" });
       return;
     }
 
@@ -225,31 +223,31 @@ export const approveDealer = async (req: AuthRequest, res: Response): Promise<vo
     await sendDealerApprovalEmail(dealer);
 
     res.json({
-      message: 'Dealer approved successfully',
-      dealer: dealer.getPublicProfile()
+      message: "Operation successful",
+      dealer
     });
 
   } catch (error) {
     console.error('Approve dealer error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Reject dealer (admin only)
-export const rejectDealer = async (req: AuthRequest, res: Response): Promise<void> => {
+export const rejectDealer = async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const dealer = await Dealer.findById(id);
     if (!dealer) {
-      res.status(404).json({ message: 'Dealer not found' });
+      res.status(404).json({ message: "Dealer not found" });
       return;
     }
 
     if (dealer.status === 'rejected') {
-      res.status(400).json({ message: 'Dealer is already rejected' });
+      res.status(400).json({ message: "Dealer is already rejected" });
       return;
     }
 
@@ -265,26 +263,26 @@ export const rejectDealer = async (req: AuthRequest, res: Response): Promise<voi
     await sendDealerRejectionEmail(dealer, reason);
 
     res.json({
-      message: 'Dealer rejected successfully',
-      dealer: dealer.getPublicProfile()
+      message: "Operation successful",
+      dealer
     });
 
   } catch (error) {
     console.error('Reject dealer error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Update dealer status (admin only)
-export const updateDealerStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateDealerStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, isActive } = req.body;
-    const admin = req.admin!;
+    const { status = 'pending', isActive } = req.body;
+    const admin = req.admin;
 
     const dealer = await Dealer.findById(id);
     if (!dealer) {
-      res.status(404).json({ message: 'Dealer not found' });
+      res.status(404).json({ message: "Dealer not found" });
       return;
     }
 
@@ -304,22 +302,22 @@ export const updateDealerStatus = async (req: AuthRequest, res: Response): Promi
     await dealer.save();
 
     res.json({
-      message: 'Dealer status updated successfully',
-      dealer: dealer.getPublicProfile()
+      message: "Operation successful",
+      dealer
     });
 
   } catch (error) {
     console.error('Update dealer status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get dealer statistics (admin only)
-export const getDealerStatistics = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerStatistics = async (req, res) => {
   try {
-    const { dateFrom, dateTo } = req.query as any;
+    const { dateFrom, dateTo } = req.query;
 
-    const query: any = {};
+    const query = {};
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) {
@@ -362,19 +360,19 @@ export const getDealerStatistics = async (req: AuthRequest, res: Response): Prom
 
   } catch (error) {
     console.error('Get dealer statistics error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Create admin account (super admin only)
-export const createAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createAdmin = async (req, res) => {
   try {
     const { username, email, password, role = 'admin' } = req.body;
-    const currentAdmin = req.admin!;
+    const currentAdmin = req.admin;
 
     // Check if current admin is super admin
     if (currentAdmin.role !== 'super_admin') {
-      res.status(403).json({ message: 'Only super admin can create new admin accounts' });
+      res.status(403).json({ message: "Access denied" });
       return;
     }
 
@@ -384,7 +382,7 @@ export const createAdmin = async (req: AuthRequest, res: Response): Promise<void
     });
 
     if (existingAdmin) {
-      res.status(400).json({ message: 'Admin with this username or email already exists' });
+      res.status(400).json({ message: "Admin already exists" });
       return;
     }
 
@@ -398,24 +396,24 @@ export const createAdmin = async (req: AuthRequest, res: Response): Promise<void
     await admin.save();
 
     res.status(201).json({
-      message: 'Admin account created successfully',
-      admin: admin.getPublicProfile()
+      message: "Operation successful",
+      admin
     });
 
   } catch (error) {
     console.error('Create admin error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get all admin accounts (super admin only)
-export const getAllAdmins = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllAdmins = async (req, res) => {
   try {
-    const currentAdmin = req.admin!;
+    const currentAdmin = req.admin;
 
     // Check if current admin is super admin
     if (currentAdmin.role !== 'super_admin') {
-      res.status(403).json({ message: 'Access denied' });
+      res.status(403).json({ message: "Access denied" });
       return;
     }
 
@@ -425,26 +423,26 @@ export const getAllAdmins = async (req: AuthRequest, res: Response): Promise<voi
 
   } catch (error) {
     console.error('Get admins error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Update admin account (super admin only)
-export const updateAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
     const { username, email, role, isActive } = req.body;
-    const currentAdmin = req.admin!;
+    const currentAdmin = req.admin;
 
     // Check if current admin is super admin
     if (currentAdmin.role !== 'super_admin') {
-      res.status(403).json({ message: 'Access denied' });
+      res.status(403).json({ message: "Access denied" });
       return;
     }
 
     const admin = await Admin.findById(id);
     if (!admin) {
-      res.status(404).json({ message: 'Admin not found' });
+      res.status(404).json({ message: "Admin not found" });
       return;
     }
 
@@ -457,26 +455,26 @@ export const updateAdmin = async (req: AuthRequest, res: Response): Promise<void
     await admin.save();
 
     res.json({
-      message: 'Admin account updated successfully',
-      admin: admin.getPublicProfile()
+      message: "Operation successful",
+      admin
     });
 
   } catch (error) {
     console.error('Update admin error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Change admin password
-export const changeAdminPassword = async (req: AuthRequest, res: Response): Promise<void> => {
+export const changeAdminPassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     // Verify current password
     const isCurrentPasswordValid = await admin.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
-      res.status(400).json({ message: 'Current password is incorrect' });
+      res.status(400).json({ message: "Invalid current password" });
       return;
     }
 
@@ -484,10 +482,10 @@ export const changeAdminPassword = async (req: AuthRequest, res: Response): Prom
     admin.password = newPassword;
     await admin.save();
 
-    res.json({ message: 'Password changed successfully' });
+    res.json({ message: "Password changed successfully" });
 
   } catch (error) {
     console.error('Change admin password error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

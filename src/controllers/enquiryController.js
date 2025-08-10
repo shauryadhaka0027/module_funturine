@@ -1,13 +1,11 @@
-import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import Enquiry from '../models/Enquiry';
-import Product from '../models/Product';
-import { sendEnquiryConfirmationEmail } from '../services/emailService';
-import { AuthRequest, EnquiryQuery } from '../types/index';
+import Enquiry from '../models/Enquiry.js';
+import Product from '../models/Product.js';
+import { sendEnquiryConfirmationEmail } from '../services/emailService.js';
 
 // Create new enquiry (dealer only)
-export const createEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
+export const createEnquiry = async (req, res) => {
+  try { 
     const {
       productId,
       productCode,
@@ -18,18 +16,18 @@ export const createEnquiry = async (req: AuthRequest, res: Response): Promise<vo
       remarks
     } = req.body;
 
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
 
     // Only allow approved dealers to create orders
     if (dealer.status !== 'approved') {
-      res.status(403).json({ message: 'Only approved dealers can place orders.' });
+      res.status(403).json({ message: "Access denied" });
       return;
     }
 
     // Verify product exists
     const product = await Product.findById(productId);
     if (!product || !product.isActive) {
-      res.status(404).json({ message: 'Product not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -39,12 +37,12 @@ export const createEnquiry = async (req: AuthRequest, res: Response): Promise<vo
     
     // Validate that the conversions resulted in valid numbers
     if (isNaN(quantityNum) || quantityNum <= 0) {
-      res.status(400).json({ message: 'Invalid quantity. Must be a positive number.' });
+      res.status(400).json({ message: "Bad request" });
       return;
     }
     
     if (isNaN(priceNum) || priceNum < 0) {
-      res.status(400).json({ message: 'Invalid price. Must be a non-negative number.' });
+      res.status(400).json({ message: "Bad request" });
       return;
     }
     
@@ -52,17 +50,16 @@ export const createEnquiry = async (req: AuthRequest, res: Response): Promise<vo
 
     // Create enquiry with dealer info
     const enquiry = new Enquiry({
-      dealer: dealer._id,
-      product: productId,
+      dealer,
+      product,
       productCode,
       productName,
       productColor,
-      quantity: quantityNum,
-      price: priceNum,
+      quantity,
+      price,
       totalAmount,
       remarks,
       dealerInfo: {
-        companyName: dealer.companyName,
         contactPersonName: dealer.contactPersonName,
         mobile: dealer.mobile,
         email: dealer.email,
@@ -77,23 +74,23 @@ export const createEnquiry = async (req: AuthRequest, res: Response): Promise<vo
     await sendEnquiryConfirmationEmail(enquiry);
 
     res.status(201).json({
-      message: 'Enquiry submitted successfully',
+      message: "Operation successful",
       enquiry
     });
 
   } catch (error) {
     console.error('Create enquiry error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get dealer's enquiries (dealer only)
-export const getDealerEnquiries = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerEnquiries = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query as EnquiryQuery;
-    const dealer = req.dealer!;
+    const { page = 1, limit = 10, status } = req.query;
+    const dealer = req.dealer;
 
-    const query: any = { dealer: dealer._id };
+    const query = { dealer: dealer._id };
     if (status) {
       query.status = status;
     }
@@ -116,21 +113,21 @@ export const getDealerEnquiries = async (req: AuthRequest, res: Response): Promi
 
   } catch (error) {
     console.error('Get dealer enquiries error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get enquiry by ID (dealer only)
-export const getDealerEnquiryById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerEnquiryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
 
     const enquiry = await Enquiry.findOne({ _id: id, dealer: dealer._id })
       .populate('product', 'productCode productName category price colors images description');
 
     if (!enquiry) {
-      res.status(404).json({ message: 'Enquiry not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -138,25 +135,25 @@ export const getDealerEnquiryById = async (req: AuthRequest, res: Response): Pro
 
   } catch (error) {
     console.error('Get enquiry error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Admin routes for enquiry management
 
 // Get all enquiries (admin only)
-export const getAdminEnquiries = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAdminEnquiries = async (req, res) => {
   try {
     const { 
       page = 1, 
       limit = 20, 
-      status, 
+      status = 'pending', 
       dealerId,
       dateFrom,
       dateTo
-    } = req.query as EnquiryQuery;
+    } = req.query;
 
-    const query: any = {};
+    const query = {};
 
     if (status) {
       query.status = status;
@@ -196,12 +193,12 @@ export const getAdminEnquiries = async (req: AuthRequest, res: Response): Promis
 
   } catch (error) {
     console.error('Get admin enquiries error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get enquiry by ID (admin only)
-export const getAdminEnquiryById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAdminEnquiryById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -211,7 +208,7 @@ export const getAdminEnquiryById = async (req: AuthRequest, res: Response): Prom
       .populate('processedBy', 'username');
 
     if (!enquiry) {
-      res.status(404).json({ message: 'Enquiry not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -219,20 +216,20 @@ export const getAdminEnquiryById = async (req: AuthRequest, res: Response): Prom
 
   } catch (error) {
     console.error('Get admin enquiry error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Update enquiry status (admin only)
-export const updateEnquiryStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateEnquiryStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, adminNotes } = req.body;
-    const admin = req.admin!;
+    const { status = 'pending', adminNotes } = req.body;
+    const admin = req.admin;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
-      res.status(404).json({ message: 'Enquiry not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -245,26 +242,26 @@ export const updateEnquiryStatus = async (req: AuthRequest, res: Response): Prom
     await enquiry.save();
 
     res.json({
-      message: 'Enquiry status updated successfully',
+      message: "Operation successful",
       enquiry
     });
 
   } catch (error) {
     console.error('Update enquiry status error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Close enquiry (admin only)
-export const closeEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const closeEnquiry = async (req, res) => {
   try {
     const { id } = req.params;
     const { adminNotes } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
-      res.status(404).json({ message: 'Enquiry not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -277,25 +274,25 @@ export const closeEnquiry = async (req: AuthRequest, res: Response): Promise<voi
     await enquiry.save();
 
     res.json({
-      message: 'Enquiry closed successfully',
+      message: "Operation successful",
       enquiry
     });
 
   } catch (error) {
     console.error('Close enquiry error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Approve enquiry (admin only)
-export const approveEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const approveEnquiry = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
-      res.status(404).json({ message: 'Enquiry not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -305,23 +302,23 @@ export const approveEnquiry = async (req: AuthRequest, res: Response): Promise<v
 
     await enquiry.save();
 
-    res.json({ message: 'Order approved', enquiry });
+    res.json({ message: "Operation successful", enquiry });
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Reject enquiry (admin only)
-export const rejectEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const rejectEnquiry = async (req, res) => {
   try {
     const { id } = req.params;
     const { adminNotes } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
-      res.status(404).json({ message: 'Enquiry not found' });
+      res.status(404).json({ message: "Not found" });
       return;
     }
 
@@ -332,19 +329,19 @@ export const rejectEnquiry = async (req: AuthRequest, res: Response): Promise<vo
 
     await enquiry.save();
 
-    res.json({ message: 'Order rejected', enquiry });
+    res.json({ message: "Operation successful", enquiry });
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 // Get enquiry statistics (admin only)
-export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getEnquiryStatistics = async (req, res) => {
   try {
-    const { dateFrom, dateTo } = req.query as EnquiryQuery;
+    const { dateFrom, dateTo } = req.query;
 
-    const query: any = {};
+    const query = {};
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) {
@@ -357,7 +354,7 @@ export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Pro
 
     const totalEnquiries = await Enquiry.countDocuments(query);
     const pendingEnquiries = await Enquiry.countDocuments({ ...query, status: 'pending' });
-    const underProcessEnquiries = await Enquiry.countDocuments({ ...query, status: 'under_process' });
+    const underProcessEnquiries = await Enquiry.countDocuments({ ...query, status: 'under-process' });
     const approvedEnquiries = await Enquiry.countDocuments({ ...query, status: 'approved' });
     const rejectedEnquiries = await Enquiry.countDocuments({ ...query, status: 'rejected' });
     const closedEnquiries = await Enquiry.countDocuments({ ...query, status: 'closed' });
@@ -370,13 +367,13 @@ export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Pro
           from: 'products',
           localField: 'product',
           foreignField: '_id',
-          as: 'product'
+          as: 'productData'
         }
       },
-      { $unwind: '$product' },
+      { $unwind: '$productData' },
       {
         $group: {
-          _id: '$product.category',
+          _id: '$productData.category',
           count: { $sum: 1 }
         }
       }
@@ -396,6 +393,6 @@ export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Pro
 
   } catch (error) {
     console.error('Get enquiry statistics error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

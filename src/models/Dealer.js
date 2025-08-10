@@ -1,8 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { IDealer } from '../types/index';
 
-const dealerSchema = new Schema<IDealer>({
+const dealerSchema = new Schema({
   companyName: {
     type: String,
     required: [true, 'Company name is required'],
@@ -91,9 +90,7 @@ const dealerSchema = new Schema<IDealer>({
     type: Boolean,
     default: false
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Hash password before saving
 dealerSchema.pre('save', async function(next) {
@@ -104,20 +101,20 @@ dealerSchema.pre('save', async function(next) {
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
-    next(error as Error);
+    next(error);
   }
 });
 
 // Method to compare password
-dealerSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+dealerSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to get public profile (without password)
-dealerSchema.methods.getPublicProfile = function(): Omit<IDealer, 'password'> {
+dealerSchema.methods.getPublicProfile = function() {
   const dealerObject = this.toObject();
   delete dealerObject.password;
   return dealerObject;
 };
 
-export default mongoose.model<IDealer>('Dealer', dealerSchema);
+export default mongoose.model('Dealer', dealerSchema);

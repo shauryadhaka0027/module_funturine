@@ -1,13 +1,12 @@
-import nodemailer, { Transporter } from 'nodemailer';
-import { IDealer, IEnquiry, EmailOptions } from '../types/index';
+import nodemailer from 'nodemailer';
 
 // Create transporter
-const createTransporter = (): Transporter => {
+const createTransporter = () => {
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
   
     return nodemailer.createTransport({
-       service:"gmail",
+       service: "gmail",
       auth: {
         user: smtpUser,
         pass: smtpPass
@@ -16,7 +15,7 @@ const createTransporter = (): Transporter => {
   };
 
 // Send email utility
-const sendEmail = async (options: EmailOptions): Promise<boolean> => {
+const sendEmail = async (options) => {
   try {
     const transporter = createTransporter();
     
@@ -36,8 +35,8 @@ const sendEmail = async (options: EmailOptions): Promise<boolean> => {
 };
 
 // Send dealer registration confirmation email
-export const sendDealerRegistrationEmail = async (dealer: IDealer): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendDealerRegistrationEmail = async (dealer) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: dealer.email,
     subject: 'Registration Successful - Awaiting Approval',
@@ -71,8 +70,8 @@ export const sendDealerRegistrationEmail = async (dealer: IDealer): Promise<bool
 };
 
 // Send dealer approval email
-export const sendDealerApprovalEmail = async (dealer: IDealer): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendDealerApprovalEmail = async (dealer) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: dealer.email,
     subject: 'Account Approved - Welcome to Moulded Furniture!',
@@ -109,8 +108,8 @@ export const sendDealerApprovalEmail = async (dealer: IDealer): Promise<boolean>
 };
 
 // Send dealer rejection email
-export const sendDealerRejectionEmail = async (dealer: IDealer, reason: string): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendDealerRejectionEmail = async (dealer, reason) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: dealer.email,
     subject: 'Registration Application Update',
@@ -139,10 +138,10 @@ export const sendDealerRejectionEmail = async (dealer: IDealer, reason: string):
 };
 
 // Send password reset email
-export const sendPasswordResetEmail = async (email: string, resetToken: string): Promise<boolean> => {
+export const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
   
-  const emailOptions: EmailOptions = {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: email,
     subject: 'Password Reset Request',
@@ -174,8 +173,8 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string):
 };
 
 // Send enquiry confirmation email
-export const sendEnquiryConfirmationEmail = async (enquiry: IEnquiry): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendEnquiryConfirmationEmail = async (enquiry) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: enquiry.dealerInfo.email,
     subject: 'Order Enquiry Received - Confirmation',

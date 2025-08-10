@@ -1,8 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { IAdmin } from '../types/index';
 
-const adminSchema = new Schema<IAdmin>({
+const adminSchema = new Schema({
   username: {
     type: String,
     required: [true, 'Username is required'],
@@ -30,9 +29,7 @@ const adminSchema = new Schema<IAdmin>({
     type: Boolean,
     default: true
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Hash password before saving
 adminSchema.pre('save', async function(next) {
@@ -43,20 +40,20 @@ adminSchema.pre('save', async function(next) {
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
-    next(error as Error);
+    next(error);
   }
 });
 
 // Method to compare password
-adminSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+adminSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to get public profile (without password)
-adminSchema.methods.getPublicProfile = function(): Omit<IAdmin, 'password'> {
+adminSchema.methods.getPublicProfile = function() {
   const adminObject = this.toObject();
   delete adminObject.password;
   return adminObject;
 };
 
-export default mongoose.model<IAdmin>('Admin', adminSchema);
+export default mongoose.model('Admin', adminSchema);

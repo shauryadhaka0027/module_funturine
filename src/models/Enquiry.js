@@ -1,7 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
-import { IEnquiry } from '../types/index';
 
-const enquirySchema = new Schema<IEnquiry>({
+const enquirySchema = new Schema({
   dealer: {
     type: Schema.Types.ObjectId,
     ref: 'Dealer',
@@ -49,10 +48,6 @@ const enquirySchema = new Schema<IEnquiry>({
     default: 'pending'
   },
   dealerInfo: {
-    companyName: {
-      type: String,
-      required: true
-    },
     contactPersonName: {
       type: String,
       required: true
@@ -92,9 +87,7 @@ const enquirySchema = new Schema<IEnquiry>({
   emailSentAt: {
     type: Date
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Calculate total amount before saving
 enquirySchema.pre('save', function(next) {
@@ -109,4 +102,4 @@ enquirySchema.index({ dealer: 1, status: 1 });
 enquirySchema.index({ status: 1, createdAt: -1 });
 enquirySchema.index({ product: 1 });
 
-export default mongoose.model<IEnquiry>('Enquiry', enquirySchema);
+export default mongoose.model('Enquiry', enquirySchema);

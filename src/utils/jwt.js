@@ -1,32 +1,31 @@
 import jwt from 'jsonwebtoken';
-import { JWTPayload } from '../types/index';
 
 // Generate JWT token
-export const generateToken = (userId: string): string => {
+export const generateToken = (userId) => {
   return jwt.sign(
     { userId }, 
     process.env.JWT_SECRET || 'dev-secret-key-change-in-production', 
-    { expiresIn: '7d' }
+    { expiresIn: '24h' }
   );
 };
 
 // Verify JWT token
-export const verifyToken = (token: string): JWTPayload => {
-  return jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-change-in-production') as JWTPayload;
+export const verifyToken = (token) => {
+  return jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-change-in-production');
 };
 
 // Generate refresh token
-export const generateRefreshToken = (userId: string): string => {
+export const generateRefreshToken = (userId) => {
   return jwt.sign(
     { userId, type: 'refresh' }, 
     process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-key', 
-    { expiresIn: '30d' }
+    { expiresIn: '7d' }
   );
 };
 
 // Verify refresh token
-export const verifyRefreshToken = (token: string): JWTPayload => {
-  const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-key') as any;
+export const verifyRefreshToken = (token) => {
+  const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-key');
   
   if (decoded.type !== 'refresh') {
     throw new Error('Invalid token type');
@@ -36,7 +35,7 @@ export const verifyRefreshToken = (token: string): JWTPayload => {
 };
 
 // Generate token for password reset
-export const generatePasswordResetToken = (userId: string): string => {
+export const generatePasswordResetToken = (userId) => {
   return jwt.sign(
     { userId, type: 'password_reset' }, 
     process.env.JWT_SECRET || 'dev-secret-key-change-in-production', 
@@ -45,8 +44,8 @@ export const generatePasswordResetToken = (userId: string): string => {
 };
 
 // Verify password reset token
-export const verifyPasswordResetToken = (token: string): JWTPayload => {
-  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-change-in-production') as any;
+export const verifyPasswordResetToken = (token) => {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-key-change-in-production');
   
   if (decoded.type !== 'password_reset') {
     throw new Error('Invalid token type');

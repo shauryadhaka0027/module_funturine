@@ -9,12 +9,12 @@ import {
   forgotPassword,
   resetPassword,
   getProfile
-} from '../controllers/authController';
+} from '../controllers/authController.js';
 import {
   validateDealerRegistration,
   validateDealerLogin,
   validateAdminLogin
-} from '../middleware/validation';
+} from '../middleware/validation.js';
 
 const router = express.Router();
 

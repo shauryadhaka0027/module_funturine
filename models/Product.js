@@ -65,7 +65,6 @@ const productSchema = new Schema({
 
 // Index for better search performance
 productSchema.index({ category: 1, isActive: 1 });
-productSchema.index({ productCode: 1 });
 productSchema.index({ productName: 1 });
 
 export default mongoose.model('Product', productSchema);

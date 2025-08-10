@@ -79,7 +79,7 @@ app.use('/api/admin', adminRoutes);
 
 // Install page route
 app.get('/install', (req, res) => {
-  res.sendFile(path.join(__dirname, '../install.html'));
+  res.sendFile(path.join(__dirname, 'install.html'));
 });
 
 // Health check endpoint

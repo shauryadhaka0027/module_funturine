@@ -20,12 +20,14 @@ router.post('/get-products', getProducts); // Using POST for complex query param
 router.get('/categories/list', getCategories);
 router.get('/category/:category', getProductsByCategory);
 router.get('/search/:query', searchProducts);
-router.get('/:id', getProductById);
 
 // Admin routes (authentication required)
 router.post('/', adminAuth, validateProductCreation, createProduct);
+router.get('/admin/all', adminAuth, getAdminProducts);
 router.put('/:id', adminAuth, updateProduct);
 router.delete('/:id', adminAuth, deleteProduct);
-router.get('/admin/all', adminAuth, getAdminProducts);
+
+// Public routes (must be after admin routes to avoid conflicts)
+router.get('/:id', getProductById);
 
 export default router;

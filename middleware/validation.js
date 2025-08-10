@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+
 import { body, validationResult } from 'express-validator';
 
 // Validation middleware for dealer registration
@@ -153,12 +153,12 @@ export const validateEnquiryCreation = [
 ];
 
 // Handle validation errors
-function handleValidationErrors(req: Request, res: Response, next: NextFunction): void {
+function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map(error => ({
-      field: error.type === 'field' ? (error as any).path : 'unknown',
+      field: error.type === 'field' ? error.path : 'unknown',
       message: error.msg
     }));
     

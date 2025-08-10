@@ -4,7 +4,7 @@ import { sendDealerRegistrationEmail } from '../services/emailService';
 // Load environment variables
 dotenv.config();
 
-const testEmail = async (): Promise<void> => {
+const testEmail = async () => {
   try {
     // Check if email configuration is set
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {

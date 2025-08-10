@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import { IProduct } from '../types/index';
 
-const productSchema = new Schema<IProduct>({
+
+const productSchema = new Schema({
   productCode: {
     type: String,
     required: [true, 'Product code is required'],
@@ -71,4 +71,4 @@ productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ productCode: 1 });
 productSchema.index({ productName: 'text' });
 
-export default mongoose.model<IProduct>('Product', productSchema);
+export default mongoose.model('Product', productSchema);

@@ -4,7 +4,7 @@ import Dealer from '../models/Dealer.js';
 import Admin from '../models/Admin.js';
 import { generateToken } from '../utils/jwt.js';
 import { sendDealerRegistrationEmail, sendPasswordResetEmail } from '../services/emailService.js';
-import { generateOTPWithExpiration, sendSMSOTP, sendEmailOTP, verifyOTP } from '../services/otpService.js';
+import { generateOTP, sendSMSOTP, sendEmailOTP, verifyOTP } from '../services/otpService.js';
 
 // Dealer Registration (Simplified - no OTP)
 export const registerDealer = async (req, res) => {
@@ -70,8 +70,8 @@ export const registerDealerStep1 = async (req, res) => {
     }
 
     // Generate OTPs
-    const mobileOtpData = generateOTPWithExpiration();
-    const emailOtpData = generateOTPWithExpiration();
+    const mobileOtp = generateOTP();
+    const emailOtp = generateOTP();
 
     // Create new dealer with OTPs
     const dealer = new Dealer({
@@ -82,17 +82,15 @@ export const registerDealerStep1 = async (req, res) => {
       address,
       gst,
       password,
-      mobileOtp: mobileOtpData.otp,
-      mobileOtpExpires: mobileOtpData.expiresAt,
-      emailOtp: emailOtpData.otp,
-      emailOtpExpires: emailOtpData.expiresAt
+      mobileOtp: mobileOtp,
+      emailOtp: emailOtp
     });
 
     await dealer.save();
 
     // Send OTPs
-    const smsSent = await sendSMSOTP(mobile, mobileOtpData.otp);
-    const emailSent = await sendEmailOTP(email, emailOtpData.otp, companyName);
+    const smsSent = await sendSMSOTP(mobile, mobileOtp);
+    const emailSent = await sendEmailOTP(email, emailOtp, companyName);
 
     if (!smsSent || !emailSent) {
       await Dealer.findByIdAndDelete(dealer._id);
@@ -125,8 +123,11 @@ export const registerDealerStep2 = async (req, res) => {
     }
 
     // Verify OTPs
-    const mobileVerified = await verifyOTP(mobileOtp, dealer.mobileOtp, dealer.mobileOtpExpires);
-    const emailVerified = await verifyOTP(emailOtp, dealer.emailOtp, dealer.emailOtpExpires);
+    const mobileResult = verifyOTP(dealer.mobile, mobileOtp);
+    const emailResult = verifyOTP(dealer.email, emailOtp);
+    
+    const mobileVerified = mobileResult.valid;
+    const emailVerified = emailResult.valid;
 
     if (!mobileVerified || !emailVerified) {
       res.status(400).json({ message: 'Invalid or expired OTP' });
@@ -166,7 +167,7 @@ export const resendOTP = async (req, res) => {
       return;
     }
 
-    const otpData = generateOTPWithExpiration();
+    const otp = generateOTP();
 
     if (type === 'mobile') {
       dealer.mobileOtp = otpData.otp;

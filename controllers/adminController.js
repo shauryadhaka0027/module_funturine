@@ -1,14 +1,12 @@
-import { Request, Response } from 'express';
 import Dealer from '../models/Dealer.js';
 import Admin from '../models/Admin.js';
 import Product from '../models/Product.js';
 import Enquiry from '../models/Enquiry.js';
 import { sendDealerApprovalEmail, sendDealerRejectionEmail } from '../services/emailService.js';
 import { generateToken } from '../utils/jwt.js';
-import { AuthRequest, DashboardStats, DealerQuery } from '../types/index.js';
 
 // Admin Login
-export const loginAdmin = async (req: Request, res: Response): Promise<void> => {
+export const loginAdmin = async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -54,7 +52,7 @@ export const loginAdmin = async (req: Request, res: Response): Promise<void> => 
 };
 
 // Get admin dashboard statistics
-export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDashboardStats = async (req, res) => {
   try {
     // Get dealer statistics
     const totalDealers = await Dealer.countDocuments();
@@ -88,7 +86,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
       .limit(5)
       .select('productCode productName quantity status createdAt');
 
-    const dashboardStats: DashboardStats = {
+    const dashboardStats = {
       dealers: {
         total: totalDealers,
         pending: pendingDealers,
@@ -121,7 +119,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
 };
 
 // Get all dealers (admin only)
-export const getAllDealers = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllDealers = async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -130,9 +128,9 @@ export const getAllDealers = async (req: AuthRequest, res: Response): Promise<vo
       search,
       sortBy = 'createdAt',
       sortOrder = 'desc'
-    } = req.query as DealerQuery;
+    } = req.query;
 
-    const query: any = {};
+    const query = {};
     
     if (status) {
       query.status = status;
@@ -147,7 +145,7 @@ export const getAllDealers = async (req: AuthRequest, res: Response): Promise<vo
       ];
     }
 
-    const sortOptions: any = {};
+    const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const dealers = await Dealer.find(query)
@@ -173,7 +171,7 @@ export const getAllDealers = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Get dealer by ID (admin only)
-export const getDealerById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -198,10 +196,10 @@ export const getDealerById = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Approve dealer (admin only)
-export const approveDealer = async (req: AuthRequest, res: Response): Promise<void> => {
+export const approveDealer = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const dealer = await Dealer.findById(id);
     if (!dealer) {
@@ -236,11 +234,11 @@ export const approveDealer = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Reject dealer (admin only)
-export const rejectDealer = async (req: AuthRequest, res: Response): Promise<void> => {
+export const rejectDealer = async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const dealer = await Dealer.findById(id);
     if (!dealer) {
@@ -276,11 +274,11 @@ export const rejectDealer = async (req: AuthRequest, res: Response): Promise<voi
 };
 
 // Update dealer status (admin only)
-export const updateDealerStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateDealerStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, isActive } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     const dealer = await Dealer.findById(id);
     if (!dealer) {
@@ -315,11 +313,11 @@ export const updateDealerStatus = async (req: AuthRequest, res: Response): Promi
 };
 
 // Get dealer statistics (admin only)
-export const getDealerStatistics = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerStatistics = async (req, res) => {
   try {
-    const { dateFrom, dateTo } = req.query as any;
+    const { dateFrom, dateTo } = req.query;
 
-    const query: any = {};
+    const query = {};
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) {
@@ -367,10 +365,10 @@ export const getDealerStatistics = async (req: AuthRequest, res: Response): Prom
 };
 
 // Create admin account (super admin only)
-export const createAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createAdmin = async (req, res) => {
   try {
     const { username, email, password, role = 'admin' } = req.body;
-    const currentAdmin = req.admin!;
+    const currentAdmin = req.admin;
 
     // Check if current admin is super admin
     if (currentAdmin.role !== 'super_admin') {
@@ -409,9 +407,9 @@ export const createAdmin = async (req: AuthRequest, res: Response): Promise<void
 };
 
 // Get all admin accounts (super admin only)
-export const getAllAdmins = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAllAdmins = async (req, res) => {
   try {
-    const currentAdmin = req.admin!;
+    const currentAdmin = req.admin;
 
     // Check if current admin is super admin
     if (currentAdmin.role !== 'super_admin') {
@@ -430,11 +428,11 @@ export const getAllAdmins = async (req: AuthRequest, res: Response): Promise<voi
 };
 
 // Update admin account (super admin only)
-export const updateAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
     const { username, email, role, isActive } = req.body;
-    const currentAdmin = req.admin!;
+    const currentAdmin = req.admin;
 
     // Check if current admin is super admin
     if (currentAdmin.role !== 'super_admin') {
@@ -468,10 +466,10 @@ export const updateAdmin = async (req: AuthRequest, res: Response): Promise<void
 };
 
 // Change admin password
-export const changeAdminPassword = async (req: AuthRequest, res: Response): Promise<void> => {
+export const changeAdminPassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const admin = req.admin!;
+    const admin = req.admin;
 
     // Verify current password
     const isCurrentPasswordValid = await admin.comparePassword(currentPassword);

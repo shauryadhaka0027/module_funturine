@@ -1,12 +1,10 @@
-import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import Enquiry from '../models/Enquiry.js';
 import Product from '../models/Product.js';
 import { sendEnquiryConfirmationEmail } from '../services/emailService.js';
-import { AuthRequest, EnquiryQuery } from '../types/index.js';
 
 // Create new enquiry (dealer only)
-export const createEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createEnquiry = async (req, res) => {
   try {
     const {
       productId,
@@ -18,7 +16,7 @@ export const createEnquiry = async (req: AuthRequest, res: Response): Promise<vo
       remarks
     } = req.body;
 
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
 
     // Only allow approved dealers to create orders
     if (dealer.status !== 'approved') {
@@ -88,18 +86,18 @@ export const createEnquiry = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Get dealer's enquiries (dealer only)
-export const getDealerEnquiries = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getDealerEnquiries = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status } = req.query as EnquiryQuery;
-    const dealer = req.dealer!;
+    const { page = 1, limit = 10, status } = req.query;
+    const dealer = req.dealer;
 
-    const query: any = { dealer: dealer._id };
+    const query = { dealer: dealer._id };
     if (status) {
       query.status = status;
     }
 
     const enquiries = await Enquiry.find(query)
-      .populate('product', 'productCode productName category price images')
+      .populate('product', 'productCode productName category')
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit))
@@ -120,14 +118,15 @@ export const getDealerEnquiries = async (req: AuthRequest, res: Response): Promi
   }
 };
 
-// Get enquiry by ID (dealer only)
-export const getDealerEnquiryById = async (req: AuthRequest, res: Response): Promise<void> => {
+// Get dealer's enquiry by ID (dealer only)
+export const getDealerEnquiryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const dealer = req.dealer!;
+    const dealer = req.dealer;
 
     const enquiry = await Enquiry.findOne({ _id: id, dealer: dealer._id })
-      .populate('product', 'productCode productName category price colors images description');
+      .populate('product', 'productCode productName category price colors')
+      .exec();
 
     if (!enquiry) {
       res.status(404).json({ message: 'Enquiry not found' });
@@ -137,27 +136,26 @@ export const getDealerEnquiryById = async (req: AuthRequest, res: Response): Pro
     res.json({ enquiry });
 
   } catch (error) {
-    console.error('Get enquiry error:', error);
+    console.error('Get dealer enquiry error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Admin routes for enquiry management
-
 // Get all enquiries (admin only)
-export const getAdminEnquiries = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAdminEnquiries = async (req, res) => {
   try {
     const { 
       page = 1, 
       limit = 20, 
       status, 
-      dealerId,
-      dateFrom,
-      dateTo
-    } = req.query as EnquiryQuery;
+      dealerId, 
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
 
-    const query: any = {};
-
+    const query = {};
+    
     if (status) {
       query.status = status;
     }
@@ -166,21 +164,22 @@ export const getAdminEnquiries = async (req: AuthRequest, res: Response): Promis
       query.dealer = dealerId;
     }
 
-    if (dateFrom || dateTo) {
-      query.createdAt = {};
-      if (dateFrom) {
-        query.createdAt.$gte = new Date(dateFrom);
-      }
-      if (dateTo) {
-        query.createdAt.$lte = new Date(dateTo);
-      }
+    if (search) {
+      query.$or = [
+        { productCode: { $regex: search, $options: 'i' } },
+        { productName: { $regex: search, $options: 'i' } },
+        { 'dealerInfo.companyName': { $regex: search, $options: 'i' } },
+        { 'dealerInfo.contactPersonName': { $regex: search, $options: 'i' } }
+      ];
     }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const enquiries = await Enquiry.find(query)
       .populate('dealer', 'companyName contactPersonName email mobile')
       .populate('product', 'productCode productName category')
-      .populate('processedBy', 'username')
-      .sort({ createdAt: -1 })
+      .sort(sortOptions)
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit))
       .exec();
@@ -201,14 +200,14 @@ export const getAdminEnquiries = async (req: AuthRequest, res: Response): Promis
 };
 
 // Get enquiry by ID (admin only)
-export const getAdminEnquiryById = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAdminEnquiryById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const enquiry = await Enquiry.findById(id)
       .populate('dealer', 'companyName contactPersonName email mobile address gst')
-      .populate('product', 'productCode productName category price colors images description')
-      .populate('processedBy', 'username');
+      .populate('product', 'productCode productName category price colors specifications')
+      .exec();
 
     if (!enquiry) {
       res.status(404).json({ message: 'Enquiry not found' });
@@ -224,11 +223,10 @@ export const getAdminEnquiryById = async (req: AuthRequest, res: Response): Prom
 };
 
 // Update enquiry status (admin only)
-export const updateEnquiryStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateEnquiryStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, adminNotes } = req.body;
-    const admin = req.admin!;
+    const { status, adminRemarks } = req.body;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
@@ -236,11 +234,16 @@ export const updateEnquiryStatus = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Update status and admin info
+    // Update status
     enquiry.status = status;
-    enquiry.adminNotes = adminNotes;
-    enquiry.processedBy = new Types.ObjectId(admin._id);
-    enquiry.processedAt = new Date();
+    
+    // Add admin remarks if provided
+    if (adminRemarks) {
+      enquiry.adminRemarks = adminRemarks;
+    }
+
+    // Add status update timestamp
+    enquiry.statusUpdatedAt = new Date();
 
     await enquiry.save();
 
@@ -256,11 +259,10 @@ export const updateEnquiryStatus = async (req: AuthRequest, res: Response): Prom
 };
 
 // Close enquiry (admin only)
-export const closeEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const closeEnquiry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminNotes } = req.body;
-    const admin = req.admin!;
+    const { adminRemarks } = req.body;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
@@ -268,11 +270,18 @@ export const closeEnquiry = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
+    if (enquiry.status === 'closed') {
+      res.status(400).json({ message: 'Enquiry is already closed' });
+      return;
+    }
+
     // Close the enquiry
     enquiry.status = 'closed';
-    enquiry.adminNotes = adminNotes;
-    enquiry.processedBy = new Types.ObjectId(admin._id);
-    enquiry.processedAt = new Date();
+    enquiry.closedAt = new Date();
+    
+    if (adminRemarks) {
+      enquiry.adminRemarks = adminRemarks;
+    }
 
     await enquiry.save();
 
@@ -288,10 +297,10 @@ export const closeEnquiry = async (req: AuthRequest, res: Response): Promise<voi
 };
 
 // Approve enquiry (admin only)
-export const approveEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const approveEnquiry = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin = req.admin!;
+    const { adminRemarks } = req.body;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
@@ -299,25 +308,37 @@ export const approveEnquiry = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
+    if (enquiry.status === 'approved') {
+      res.status(400).json({ message: 'Enquiry is already approved' });
+      return;
+    }
+
+    // Approve the enquiry
     enquiry.status = 'approved';
-    enquiry.processedBy = new Types.ObjectId(admin._id);
-    enquiry.processedAt = new Date();
+    enquiry.approvedAt = new Date();
+    
+    if (adminRemarks) {
+      enquiry.adminRemarks = adminRemarks;
+    }
 
     await enquiry.save();
 
-    res.json({ message: 'Order approved', enquiry });
+    res.json({
+      message: 'Enquiry approved successfully',
+      enquiry
+    });
 
   } catch (error) {
+    console.error('Approve enquiry error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 // Reject enquiry (admin only)
-export const rejectEnquiry = async (req: AuthRequest, res: Response): Promise<void> => {
+export const rejectEnquiry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminNotes } = req.body;
-    const admin = req.admin!;
+    const { reason, adminRemarks } = req.body;
 
     const enquiry = await Enquiry.findById(id);
     if (!enquiry) {
@@ -325,26 +346,39 @@ export const rejectEnquiry = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    if (enquiry.status === 'rejected') {
+      res.status(400).json({ message: 'Enquiry is already rejected' });
+      return;
+    }
+
+    // Reject the enquiry
     enquiry.status = 'rejected';
-    enquiry.adminNotes = adminNotes;
-    enquiry.processedBy = new Types.ObjectId(admin._id);
-    enquiry.processedAt = new Date();
+    enquiry.rejectionReason = reason;
+    enquiry.rejectedAt = new Date();
+    
+    if (adminRemarks) {
+      enquiry.adminRemarks = adminRemarks;
+    }
 
     await enquiry.save();
 
-    res.json({ message: 'Order rejected', enquiry });
+    res.json({
+      message: 'Enquiry rejected successfully',
+      enquiry
+    });
 
   } catch (error) {
+    console.error('Reject enquiry error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 // Get enquiry statistics (admin only)
-export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getEnquiryStatistics = async (req, res) => {
   try {
-    const { dateFrom, dateTo } = req.query as EnquiryQuery;
+    const { dateFrom, dateTo } = req.query;
 
-    const query: any = {};
+    const query = {};
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) {
@@ -362,21 +396,27 @@ export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Pro
     const rejectedEnquiries = await Enquiry.countDocuments({ ...query, status: 'rejected' });
     const closedEnquiries = await Enquiry.countDocuments({ ...query, status: 'closed' });
 
-    // Get enquiries by category
-    const enquiriesByCategory = await Enquiry.aggregate([
+    // Get enquiries by month (for chart)
+    const enquiriesByMonth = await Enquiry.aggregate([
       { $match: query },
       {
-        $lookup: {
-          from: 'products',
-          localField: 'product',
-          foreignField: '_id',
-          as: 'product'
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          count: { $sum: 1 }
         }
       },
-      { $unwind: '$product' },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Get enquiries by status (for pie chart)
+    const enquiriesByStatus = await Enquiry.aggregate([
+      { $match: query },
       {
         $group: {
-          _id: '$product.category',
+          _id: '$status',
           count: { $sum: 1 }
         }
       }
@@ -389,7 +429,8 @@ export const getEnquiryStatistics = async (req: AuthRequest, res: Response): Pro
       approvedEnquiries,
       rejectedEnquiries,
       closedEnquiries,
-      enquiriesByCategory
+      enquiriesByMonth,
+      enquiriesByStatus
     };
 
     res.json({ statistics });

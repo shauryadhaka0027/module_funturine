@@ -6,7 +6,7 @@ import Product from '../models/Product';
 // Load environment variables
 dotenv.config();
 
-const initializeDatabase = async (): Promise<void> => {
+const initializeDatabase = async () => {
   try {
     // Connect to MongoDB
     await mongoose.connect(

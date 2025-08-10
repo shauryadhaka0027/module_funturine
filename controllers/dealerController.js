@@ -1,4 +1,3 @@
-import Dealer from '../models/Dealer.js';
 import Enquiry from '../models/Enquiry.js';
 
 // Get dealer profile

@@ -5,7 +5,7 @@ import Admin from '../models/Admin';
 // Load environment variables
 dotenv.config();
 
-const createAdmin = async (): Promise<void> => {
+const createAdmin = async () => {
   try {
     // Connect to MongoDB
     await mongoose.connect(

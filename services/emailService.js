@@ -1,8 +1,7 @@
-import nodemailer, { Transporter } from 'nodemailer';
-import { IDealer, IEnquiry, EmailOptions } from '../types/index.js';
+import nodemailer from 'nodemailer';
 
 // Create transporter
-const createTransporter = (): Transporter => {
+const createTransporter = () => {
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
   
@@ -16,7 +15,7 @@ const createTransporter = (): Transporter => {
   };
 
 // Send email utility
-const sendEmail = async (options: EmailOptions): Promise<boolean> => {
+const sendEmail = async (options) => {
   try {
     const transporter = createTransporter();
     
@@ -36,8 +35,8 @@ const sendEmail = async (options: EmailOptions): Promise<boolean> => {
 };
 
 // Send dealer registration confirmation email
-export const sendDealerRegistrationEmail = async (dealer: IDealer): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendDealerRegistrationEmail = async (dealer) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: dealer.email,
     subject: 'Registration Successful - Awaiting Approval',
@@ -71,8 +70,8 @@ export const sendDealerRegistrationEmail = async (dealer: IDealer): Promise<bool
 };
 
 // Send dealer approval email
-export const sendDealerApprovalEmail = async (dealer: IDealer): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendDealerApprovalEmail = async (dealer) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: dealer.email,
     subject: 'Account Approved - Welcome to Moulded Furniture!',
@@ -98,7 +97,9 @@ export const sendDealerApprovalEmail = async (dealer: IDealer): Promise<boolean>
           <p><strong>Password:</strong> Use the password you set during registration</p>
         </div>
         
-        <p>You can now log in to our system and start placing orders. Welcome to the Moulded Furniture family!</p>
+        <p>Please visit our website to start exploring our products and place your first order.</p>
+        
+        <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
         
         <p>Best regards,<br>Moulded Furniture Team</p>
       </div>
@@ -109,26 +110,25 @@ export const sendDealerApprovalEmail = async (dealer: IDealer): Promise<boolean>
 };
 
 // Send dealer rejection email
-export const sendDealerRejectionEmail = async (dealer: IDealer, reason: string): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendDealerRejectionEmail = async (dealer, reason) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: dealer.email,
-    subject: 'Registration Application Update',
+    subject: 'Account Application Status Update',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc3545;">Registration Application Update</h2>
+        <h2 style="color: #dc3545;">Application Status Update</h2>
         <p>Dear ${dealer.contactPersonName},</p>
-        <p>We have reviewed your dealer registration application for ${dealer.companyName}.</p>
+        <p>Thank you for your interest in becoming a dealer with Moulded Furniture.</p>
         
         <div style="background-color: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
-          <p style="color: #721c24;">Unfortunately, we are unable to approve your application at this time.</p>
-          <p style="color: #721c24;"><strong>Reason:</strong> ${reason}</p>
+          <h3 style="color: #721c24;">Application Status: Not Approved</h3>
+          <p><strong>Reason:</strong> ${reason || 'Application did not meet our current requirements'}</p>
         </div>
         
-        <p>If you believe this decision was made in error or if you have additional information to provide, please contact our support team.</p>
-        <p>You may also reapply with updated information if applicable.</p>
+        <p>We encourage you to review the information provided and consider reapplying in the future if your circumstances change.</p>
         
-        <p>Thank you for your interest in Moulded Furniture.</p>
+        <p>If you believe this decision was made in error or have additional information to provide, please contact our support team.</p>
         
         <p>Best regards,<br>Moulded Furniture Team</p>
       </div>
@@ -139,31 +139,32 @@ export const sendDealerRejectionEmail = async (dealer: IDealer, reason: string):
 };
 
 // Send password reset email
-export const sendPasswordResetEmail = async (email: string, resetToken: string): Promise<boolean> => {
+export const sendPasswordResetEmail = async (email, resetToken) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
   
-  const emailOptions: EmailOptions = {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: 'Password Reset Request',
+    subject: 'Password Reset Request - Moulded Furniture',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Password Reset Request</h2>
-        <p>You requested a password reset for your Moulded Furniture account.</p>
-        <p>Click the link below to reset your password:</p>
+        <p>You have requested to reset your password for your Moulded Furniture dealer account.</p>
         
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}" 
-             style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            Reset Password
-          </a>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Click the button below to reset your password:</strong></p>
+          <a href="${resetUrl}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0;">Reset Password</a>
         </div>
         
-        <p>Or copy and paste this link in your browser:</p>
-        <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+        <p><strong>Important:</strong></p>
+        <ul>
+          <li>This link will expire in 1 hour</li>
+          <li>If you didn't request this password reset, please ignore this email</li>
+          <li>For security reasons, please don't share this link with anyone</li>
+        </ul>
         
-        <p><strong>Note:</strong> This link will expire in 1 hour for security reasons.</p>
-        <p>If you didn't request this password reset, please ignore this email.</p>
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
         
         <p>Best regards,<br>Moulded Furniture Team</p>
       </div>
@@ -174,33 +175,32 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string):
 };
 
 // Send enquiry confirmation email
-export const sendEnquiryConfirmationEmail = async (enquiry: IEnquiry): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+export const sendEnquiryConfirmationEmail = async (enquiry) => {
+  const emailOptions = {
     from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
     to: enquiry.dealerInfo.email,
-    subject: 'Order Enquiry Received - Confirmation',
+    subject: 'Enquiry Confirmation - Moulded Furniture',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #28a745;">Order Enquiry Received!</h2>
+        <h2 style="color: #333;">Enquiry Confirmation</h2>
         <p>Dear ${enquiry.dealerInfo.contactPersonName},</p>
-        <p>Thank you for your enquiry. We have received your order request and our team will process it shortly.</p>
+        <p>Thank you for your enquiry. We have received your request and it is currently being processed.</p>
         
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
-          <h3 style="color: #333;">Order Details:</h3>
-          <p><strong>Product:</strong> ${enquiry.productName} (${enquiry.productCode})</p>
+          <h3 style="color: #333;">Enquiry Details:</h3>
+          <p><strong>Enquiry ID:</strong> ${enquiry._id}</p>
+          <p><strong>Product Code:</strong> ${enquiry.productCode}</p>
+          <p><strong>Product Name:</strong> ${enquiry.productName}</p>
           <p><strong>Color:</strong> ${enquiry.productColor}</p>
           <p><strong>Quantity:</strong> ${enquiry.quantity}</p>
-          <p><strong>Unit Price:</strong> ₹${enquiry.price.toFixed(2)}</p>
-          <p><strong>Total Amount:</strong> ₹${enquiry.totalAmount.toFixed(2)}</p>
-          ${enquiry.remarks ? `<p><strong>Remarks:</strong> ${enquiry.remarks}</p>` : ''}
+          <p><strong>Price per unit:</strong> ₹${enquiry.price}</p>
+          <p><strong>Total Amount:</strong> ₹${enquiry.totalAmount}</p>
+          <p><strong>Status:</strong> Pending Review</p>
         </div>
         
-        <div style="background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p><strong>Status:</strong> ${enquiry.status.charAt(0).toUpperCase() + enquiry.status.slice(1)}</p>
-          <p>We will review your enquiry and get back to you within 24 hours with confirmation and further details.</p>
-        </div>
+        <p>Our team will review your enquiry and get back to you within 24-48 hours with further details.</p>
         
-        <p>You can track the status of your enquiry by logging into your dealer account.</p>
+        <p>If you have any questions, please contact our support team.</p>
         
         <p>Best regards,<br>Moulded Furniture Team</p>
       </div>

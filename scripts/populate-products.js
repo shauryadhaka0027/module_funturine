@@ -99,7 +99,7 @@ const sampleProducts = [
   }
 ];
 
-const populateProducts = async (): Promise<void> => {
+const populateProducts = async () => {
   try {
     // Connect to MongoDB
     await mongoose.connect(

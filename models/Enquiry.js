@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import { IEnquiry } from '../types/index';
 
-const enquirySchema = new Schema<IEnquiry>({
+
+const enquirySchema = new Schema({
   dealer: {
     type: Schema.Types.ObjectId,
     ref: 'Dealer',
@@ -109,4 +109,4 @@ enquirySchema.index({ dealer: 1, status: 1 });
 enquirySchema.index({ status: 1, createdAt: -1 });
 enquirySchema.index({ product: 1 });
 
-export default mongoose.model<IEnquiry>('Enquiry', enquirySchema);
+export default mongoose.model('Enquiry', enquirySchema);

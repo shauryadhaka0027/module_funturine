@@ -1,9 +1,7 @@
-import { Request, Response } from 'express';
 import Product from '../models/Product.js';
-import { AuthRequest, ProductQuery } from '../types/index.js';
 
 // Get all products (public - for visitors and dealers)
-export const getProducts = async (req: Request, res: Response): Promise<void> => {
+export const getProducts = async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -12,9 +10,9 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       search, 
       sortBy = 'createdAt',
       sortOrder = 'desc'
-    } = req.query as ProductQuery;
+    } = req.query;
 
-    const query: any = { isActive: true };
+    const query = { isActive: true };
     
     // Filter by category
     if (category) {
@@ -30,7 +28,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       ];
     }
 
-    const sortOptions: any = {};
+    const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const products = await Product.find(query)
@@ -60,7 +58,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
 };
 
 // Get product by ID (public)
-export const getProductById = async (req: Request, res: Response): Promise<void> => {
+export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -82,17 +80,17 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 };
 
 // Get products by category
-export const getProductsByCategory = async (req: Request, res: Response): Promise<void> => {
+export const getProductsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
-    const { page = 1, limit = 12, sortBy = 'createdAt', sortOrder = 'desc' } = req.query as ProductQuery;
+    const { page = 1, limit = 12, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-    const query: any = { 
+    const query = { 
       category: category,
       isActive: true 
     };
 
-    const sortOptions: any = {};
+    const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const products = await Product.find(query)
@@ -119,12 +117,12 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
 };
 
 // Search products
-export const searchProducts = async (req: Request, res: Response): Promise<void> => {
+export const searchProducts = async (req, res) => {
   try {
     const { query } = req.params;
-    const { page = 1, limit = 12 } = req.query as ProductQuery;
+    const { page = 1, limit = 12 } = req.query;
 
-    const searchQuery: any = {
+    const searchQuery = {
       isActive: true,
       $or: [
         { productName: { $regex: query, $options: 'i' } },
@@ -158,7 +156,7 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
 };
 
 // Get product categories
-export const getCategories = async (req: Request, res: Response): Promise<void> => {
+export const getCategories = async (req, res) => {
   try {
     const categories = await Product.distinct('category', { isActive: true });
     
@@ -173,7 +171,7 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
 // Admin routes for product management
 
 // Create new product (admin only)
-export const createProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createProduct = async (req, res) => {
   try {
     const {
       productCode,
@@ -206,7 +204,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       specifications: specifications || {},
       warranty,
       stockQuantity: stockQuantity || 0,
-      createdBy: req.admin!._id
+      createdBy: req.admin._id
     });
 
     await product.save();
@@ -223,7 +221,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Update product (admin only)
-export const updateProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -237,7 +235,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     // Update product fields
     Object.keys(updateData).forEach(key => {
       if (key !== 'createdBy' && key !== '_id') {
-        (product as any)[key] = updateData[key];
+        product[key] = updateData[key];
       }
     });
 
@@ -255,7 +253,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Delete product (admin only)
-export const deleteProduct = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -278,11 +276,11 @@ export const deleteProduct = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // Get all products for admin (including inactive)
-export const getAdminProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getAdminProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 20, category, status } = req.query as any;
+    const { page = 1, limit = 20, category, status } = req.query;
 
-    const query: any = {};
+    const query = {};
     
     if (category) {
       query.category = category;

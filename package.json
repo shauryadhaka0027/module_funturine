@@ -6,7 +6,9 @@
  "scripts": {
   "build": "tsc",
   "start": "node dist/server.js",
-  "dev": "ts-node-dev --respawn --transpile-only server.ts"
+  "dev": "ts-node-dev --respawn --transpile-only server.ts",
+  "render-build": "npm install && npm run build",
+  "render-start": "node dist/server.js"
 },
   "keywords": [
     "furniture",

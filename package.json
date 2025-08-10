@@ -2,12 +2,12 @@
   "name": "module_funturine",
   "version": "1.0.0",
   "description": "Moulded Furniture API - A comprehensive furniture management system",
-  "main": "server.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "dev": "nodemon server.ts"
-  },
+  "main": "dist/server.js",
+ "scripts": {
+  "build": "tsc",
+  "start": "node dist/server.js",
+  "dev": "ts-node-dev --respawn --transpile-only server.ts"
+},
   "keywords": [
     "furniture",
     "api",

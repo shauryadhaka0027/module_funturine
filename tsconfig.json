@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "allowJs": true,
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "./",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -27,7 +27,7 @@
     "skipLibCheck": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "baseUrl": ".",
+    "baseUrl": "./",
     "paths": {
       "@/*": ["*"],
       "@/controllers/*": ["controllers/*"],
@@ -40,7 +40,7 @@
     }
   },
   "include": [
-    "./**/*"
+    "**/*"
   ],
   "exclude": [
     "node_modules",

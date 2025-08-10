@@ -4,7 +4,6 @@ services:
     env: node
     buildCommand: npm install && npm run build
     startCommand: node dist/server.js
-    rootDir: .
     plan: free
     branch: main
     healthCheckPath: /api/health

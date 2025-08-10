@@ -2,7 +2,7 @@
   "name": "module_funturine",
   "version": "1.0.0",
   "description": "Moulded Furniture API - A comprehensive furniture management system",
-  "main": "dist/server.js",
+  "main": "./dist/server.js",
  "scripts": {
   "build": "tsc",
   "start": "node dist/server.js",

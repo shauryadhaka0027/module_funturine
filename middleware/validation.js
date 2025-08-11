@@ -29,14 +29,17 @@ export const validateDealerRegistration = [
   body('address')
     .notEmpty()
     .withMessage('Address is required')
-    .isLength({ min: 10, max: 200 })
+    .isLength({ min: 2, max: 200 })
     .withMessage('Address must be between 10 and 200 characters'),
   
   body('gst')
     .notEmpty()
     .withMessage('GST number is required')
     .isLength({ min: 15, max: 15 })
-    .withMessage('GST number must be 15 characters'),
+    .withMessage('GST number must be 15 characters')
+    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/)
+    .withMessage('Please enter a valid GST number format (e.g., 07AABCU9603R1ZX)')
+    .customSanitizer(value => value.toUpperCase()),
   
   body('password')
     .isLength({ min: 6 })
@@ -51,7 +54,12 @@ export const validateDealerRegistration = [
 export const validateDealerLogin = [
   body('gst')
     .notEmpty()
-    .withMessage('GST number is required'),
+    .withMessage('GST number is required')
+    .isLength({ min: 15, max: 15 })
+    .withMessage('GST number must be 15 characters')
+    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/)
+    .withMessage('Please enter a valid GST number format')
+    .customSanitizer(value => value.toUpperCase()),
   
   body('password')
     .notEmpty()
@@ -148,6 +156,20 @@ export const validateEnquiryCreation = [
     .optional()
     .isLength({ max: 500 })
     .withMessage('Remarks cannot exceed 500 characters'),
+  
+  handleValidationErrors
+];
+
+// Validation middleware for forgot password
+export const validateForgotPassword = [
+  body('gst')
+    .notEmpty()
+    .withMessage('GST number is required')
+    .isLength({ min: 15, max: 15 })
+    .withMessage('GST number must be 15 characters')
+    .matches(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/)
+    .withMessage('Please enter a valid GST number format')
+    .customSanitizer(value => value.toUpperCase()),
   
   handleValidationErrors
 ];

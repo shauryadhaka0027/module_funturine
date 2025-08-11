@@ -8,20 +8,64 @@ import { generateOTP, sendSMSOTP, sendEmailOTP, verifyOTP } from '../services/ot
 
 // Dealer Registration (Simplified - no OTP)
 export const registerDealer = async (req, res) => {
+  const { companyName, contactPersonName, mobile, email, address, gst, password } = req.body;
+
+  console.log("=== DEALER REGISTRATION DEBUG ===");
+  console.log("Request body:", JSON.stringify(req.body, null, 2));
+  console.log("Required fields check:");
+  console.log("- companyName:", companyName ? "✓" : "✗ MISSING");
+  console.log("- contactPersonName:", contactPersonName ? "✓" : "✗ MISSING");
+  console.log("- mobile:", mobile ? "✓" : "✗ MISSING");
+  console.log("- email:", email ? "✓" : "✗ MISSING");
+  console.log("- address:", address ? "✓" : "✗ MISSING");
+  console.log("- gst:", gst ? "✓" : "✗ MISSING");
+  console.log("- password:", password ? "✓" : "✗ MISSING");
   try {
-    const { companyName, contactPersonName, mobile, email, address, gst, password } = req.body;
+   
+
+    // Validate required fields
+    const missingFields = [];
+    if (!companyName) missingFields.push('companyName');
+    if (!contactPersonName) missingFields.push('contactPersonName');
+    if (!mobile) missingFields.push('mobile');
+    if (!email) missingFields.push('email');
+    if (!address) missingFields.push('address');
+    if (!gst) missingFields.push('gst');
+    if (!password) missingFields.push('password');
+
+    if (missingFields.length > 0) {
+      console.log("✗ Missing required fields:", missingFields);
+      return res.status(400).json({
+        message: 'Missing required fields',
+        missingFields: missingFields,
+        error: 'VALIDATION_ERROR'
+      });
+    }
 
     // Check if dealer already exists
+    console.log("Checking for existing dealer...");
     const existingDealer = await Dealer.findOne({ 
       $or: [{ email }, { mobile }, { gst }] 
     });
 
     if (existingDealer) {
-      res.status(400).json({ 
-        message: 'Dealer with this email, mobile, or GST already exists' 
+      console.log("✗ Dealer already exists:", {
+        email: existingDealer.email === email,
+        mobile: existingDealer.mobile === mobile,
+        gst: existingDealer.gst === gst
       });
-      return;
+      return res.status(400).json({ 
+        message: 'Dealer with this email, mobile, or GST already exists',
+        error: 'DUPLICATE_DEALER',
+        conflictFields: {
+          email: existingDealer.email === email,
+          mobile: existingDealer.mobile === mobile,
+          gst: existingDealer.gst === gst
+        }
+      });
     }
+
+    console.log("✓ No existing dealer found. Creating new dealer...");
 
     // Create new dealer without OTP verification
     const dealer = new Dealer({
@@ -39,16 +83,47 @@ export const registerDealer = async (req, res) => {
     });
 
     await dealer.save();
+    console.log("✓ Dealer created successfully with ID:", dealer._id);
 
     res.status(201).json({
       message: 'Registration submitted successfully. Please wait for admin approval.',
       dealerId: dealer._id,
-      dealer: dealer.getPublicProfile()
+      dealer: dealer.getPublicProfile(),
+      success: true
     });
 
   } catch (error) {
-    console.error('Dealer registration error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('✗ Dealer registration error:', error);
+    
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message
+      }));
+      
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: validationErrors,
+        error: 'MONGOOSE_VALIDATION_ERROR'
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        message: `A dealer with this ${duplicateField} already exists`,
+        error: 'DUPLICATE_KEY_ERROR',
+        field: duplicateField
+      });
+    }
+
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      type: error.name
+    });
   }
 };
 
@@ -170,21 +245,21 @@ export const resendOTP = async (req, res) => {
     const otp = generateOTP();
 
     if (type === 'mobile') {
-      dealer.mobileOtp = otpData.otp;
-      dealer.mobileOtpExpires = otpData.expiresAt;
+      dealer.mobileOtp = otp;
+      dealer.mobileOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
       await dealer.save();
       
-      const smsSent = await sendSMSOTP(dealer.mobile, otpData.otp);
+      const smsSent = await sendSMSOTP(dealer.mobile, otp);
       if (!smsSent) {
         res.status(500).json({ message: 'Failed to send SMS OTP' });
         return;
       }
     } else if (type === 'email') {
-      dealer.emailOtp = otpData.otp;
-      dealer.emailOtpExpires = otpData.expiresAt;
+      dealer.emailOtp = otp;
+      dealer.emailOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
       await dealer.save();
       
-      const emailSent = await sendEmailOTP(dealer.email, otpData.otp, dealer.companyName);
+      const emailSent = await sendEmailOTP(dealer.email, otp, dealer.companyName);
       if (!emailSent) {
         res.status(500).json({ message: 'Failed to send email OTP' });
         return;
@@ -202,9 +277,9 @@ export const resendOTP = async (req, res) => {
 // Dealer Login
 export const loginDealer = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { gst, password } = req.body;
 
-    const dealer = await Dealer.findOne({ email }).select('+password');
+    const dealer = await Dealer.findOne({ gst: gst.toUpperCase() }).select('+password');
     if (!dealer) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
@@ -236,7 +311,7 @@ export const loginDealer = async (req, res) => {
     // Generate JWT token
     const token = generateToken({
       id: dealer._id,
-      email: dealer.email,
+      gst: dealer.gst,
       role: 'dealer'
     });
 
@@ -291,9 +366,9 @@ export const loginAdmin = async (req, res) => {
 // Forgot Password
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { gst } = req.body;
 
-    const dealer = await Dealer.findOne({ email });
+    const dealer = await Dealer.findOne({ gst: gst.toUpperCase() });
     if (!dealer) {
       res.status(404).json({ message: 'Dealer not found' });
       return;
@@ -306,14 +381,14 @@ export const forgotPassword = async (req, res) => {
 
     await dealer.save();
 
-    // Send reset email
-    const emailSent = await sendPasswordResetEmail(email, resetToken, dealer.companyName);
+    // Send reset email (using dealer's email from the found record)
+    const emailSent = await sendPasswordResetEmail(dealer.email, resetToken, dealer.companyName);
     if (!emailSent) {
       res.status(500).json({ message: 'Failed to send reset email' });
       return;
     }
 
-    res.json({ message: 'Password reset email sent successfully' });
+    res.json({ message: 'Password reset email sent successfully to your registered email address' });
 
   } catch (error) {
     console.error('Forgot password error:', error);

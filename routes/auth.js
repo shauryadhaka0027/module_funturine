@@ -13,7 +13,8 @@ import {
 import {
   validateDealerRegistration,
   validateDealerLogin,
-  validateAdminLogin
+  validateAdminLogin,
+  validateForgotPassword
 } from '../middleware/validation.js';
 
 const router = express.Router();
@@ -24,7 +25,7 @@ router.post('/dealer/register/step1', validateDealerRegistration, registerDealer
 router.post('/dealer/register/step2', registerDealerStep2);
 router.post('/dealer/resend-otp', resendOTP);
 router.post('/dealer/login', validateDealerLogin, loginDealer);
-router.post('/dealer/forgot-password', forgotPassword);
+router.post('/dealer/forgot-password', validateForgotPassword, forgotPassword);
 
 // Admin authentication routes
 router.post('/admin/login', validateAdminLogin, loginAdmin);

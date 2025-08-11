@@ -34,7 +34,9 @@ const dealerSchema = new Schema({
   gst: {
     type: String,
     required: [true, 'GST number is required'],
-    unique: true
+    unique: true,
+    uppercase: true,
+    match: [/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/, 'Please enter a valid GST number']
   },
   password: {
     type: String,

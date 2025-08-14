@@ -50,12 +50,17 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// MongoDB Connection
-const connectDB = async () => {
-  const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/moulded-furniture';
+// MongoDB Connection with retry mechanism
+const connectDB = async (retries = 3) => {
+  const mongoURI = process.env.MONGODB_URI;
   
-  // console.log('Attempting to connect to MongoDB...');
-  // console.log('MongoDB URI:', mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials in logs
+  if (!mongoURI) {
+    console.error('✗ MONGODB_URI environment variable is not set');
+    throw new Error('MONGODB_URI not configured');
+  }
+  
+  console.log('Attempting to connect to MongoDB...');
+  console.log('MongoDB URI:', mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials in logs
   
   const options = {
     maxPoolSize: 10,
@@ -66,30 +71,42 @@ const connectDB = async () => {
     w: 'majority'
   };
   
-  try {
-    await mongoose.connect(mongoURI);
-    console.log('✓ Successfully connected to MongoDB');
-    console.log('✓ Database:', mongoose.connection.name);
-    console.log('✓ Host:', mongoose.connection.host);
-  } catch (err) {
-    console.error('✗ MongoDB connection error:', err.message);
-    
-    if (err.message.includes('ECONNREFUSED')) {
-      console.error('MongoDB server is not running or not accessible.');
-      console.error('Please check:');
-      console.error('1. MongoDB server is started');
-      console.error('2. MONGODB_URI environment variable is set correctly');
-      console.error('3. Network connectivity to MongoDB server');
-    } else if (err.message.includes('Authentication failed')) {
-      console.error('MongoDB authentication failed. Please check:');
-      console.error('1. Username and password are correct');
-      console.error('2. User has proper permissions');
-    } else if (err.message.includes('ENOTFOUND')) {
-      console.error('MongoDB host not found. Please check:');
-      console.error('1. MongoDB URI is correct');
-      console.error('2. Network connectivity');
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`Connection attempt ${attempt}/${retries}...`);
+      await mongoose.connect(mongoURI, options);
+      console.log('✓ Successfully connected to MongoDB');
+      console.log('✓ Database:', mongoose.connection.name);
+      console.log('✓ Host:', mongoose.connection.host);
+      return; // Success, exit the function
+    } catch (err) {
+      console.error(`✗ MongoDB connection attempt ${attempt} failed:`, err.message);
+      
+      if (attempt === retries) {
+        // Last attempt failed, throw the error
+        if (err.message.includes('ECONNREFUSED')) {
+          console.error('MongoDB server is not running or not accessible.');
+          console.error('Please check:');
+          console.error('1. MongoDB server is started');
+          console.error('2. MONGODB_URI environment variable is set correctly');
+          console.error('3. Network connectivity to MongoDB server');
+        } else if (err.message.includes('Authentication failed')) {
+          console.error('MongoDB authentication failed. Please check:');
+          console.error('1. Username and password are correct');
+          console.error('2. User has proper permissions');
+        } else if (err.message.includes('ENOTFOUND')) {
+          console.error('MongoDB host not found. Please check:');
+          console.error('1. MongoDB URI is correct');
+          console.error('2. Network connectivity');
+        }
+        throw err;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`Waiting ${waitTime}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-
   }
 };
 
@@ -102,15 +119,7 @@ app.use('/api/admin', adminRoutes);
 
 console.log('✓ Routes configured');
 
-// Connect to database
-connectDB().then(() => {
-  console.log('✓ Database connected successfully');
-}).catch((error) => {
-  console.error('✗ Failed to connect to database:', error);
-  if (process.env.NODE_ENV !== 'production') {
-    process.exit(1);
-  }
-});
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -185,11 +194,18 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, async() => {
-   await connectDB
+app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Connect to database after server starts
+  try {
+    await connectDB();
+    console.log('✓ Database connection established');
+  } catch (error) {
+    console.error('✗ Failed to connect to database:', error);
+  }
 });
 
 export default app;

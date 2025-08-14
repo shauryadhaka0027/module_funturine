@@ -19,7 +19,7 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Middleware
 app.use(cors({
-  origin: ["*", "https://admindashboardfurniture.vercel.app"], // Allow all origins
+  origin: "https://admindashboardfurniture.vercel.app", // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

@@ -88,16 +88,18 @@ const connectDB = async () => {
   }
 };
 
-// Connect to database and then set up routes
+// Set up routes immediately (they will work once DB connects)
+app.use('/api/auth', authRoutes);
+app.use('/api/dealers', dealerRoutes);
+app.use('/api/enquiries', enquiryRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/admin', adminRoutes);
+
+console.log('✓ Routes configured');
+
+// Connect to database
 connectDB().then(() => {
-  // Routes - only set up after database connection is established
-  app.use('/api/auth', authRoutes);
-  app.use('/api/dealers', dealerRoutes);
-  app.use('/api/enquiries', enquiryRoutes);
-  app.use('/api/products', productRoutes);
-  app.use('/api/admin', adminRoutes);
-  
-  console.log('✓ Routes configured after database connection');
+  console.log('✓ Database connected successfully');
 }).catch((error) => {
   console.error('✗ Failed to connect to database:', error);
   if (process.env.NODE_ENV !== 'production') {
@@ -135,6 +137,15 @@ app.post('/api/test-enquiry', (req, res) => {
     message: 'Test endpoint working',
     receivedBody: req.body,
     headers: req.headers
+  });
+});
+
+// Test admin route
+app.get('/api/admin/test', (req, res) => {
+  res.json({
+    message: 'Admin route is working',
+    timestamp: new Date().toISOString(),
+    routes: ['/api/admin/login', '/api/admin/dashboard', '/api/admin/dealers']
   });
 });
 

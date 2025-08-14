@@ -19,7 +19,16 @@ export const loginAdmin = async (req, res) => {
     // Check if database is connected
     if (mongoose.connection.readyState !== 1) {
       console.error('Database not connected. ReadyState:', mongoose.connection.readyState);
-      res.status(503).json({ message: 'Database connection not available. Please try again.' });
+      const readyStateMap = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting'
+      };
+      res.status(503).json({ 
+        message: 'Database connection not available. Please try again.',
+        status: readyStateMap[mongoose.connection.readyState] || 'unknown'
+      });
       return;
     }
 

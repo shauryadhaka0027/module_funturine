@@ -54,19 +54,23 @@ app.use(limiter);
 const connectDB = async () => {
   const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/moulded-furniture';
   
-  console.log('Attempting to connect to MongoDB...');
-  console.log('MongoDB URI:', mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials in logs
+  // console.log('Attempting to connect to MongoDB...');
+  // console.log('MongoDB URI:', mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials in logs
   
   const options = {
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+    serverSelectionTimeoutMS: 10000, // Increased timeout to 10 seconds
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-    bufferCommands: false // Disable mongoose buffering
+    bufferCommands: false, // Disable mongoose buffering
+    retryWrites: true,
+    w: 'majority'
   };
   
   try {
-    await mongoose.connect(mongoURI, options);
+    await mongoose.connect(mongoURI);
     console.log('✓ Successfully connected to MongoDB');
+    console.log('✓ Database:', mongoose.connection.name);
+    console.log('✓ Host:', mongoose.connection.host);
   } catch (err) {
     console.error('✗ MongoDB connection error:', err.message);
     
@@ -76,6 +80,14 @@ const connectDB = async () => {
       console.error('1. MongoDB server is started');
       console.error('2. MONGODB_URI environment variable is set correctly');
       console.error('3. Network connectivity to MongoDB server');
+    } else if (err.message.includes('Authentication failed')) {
+      console.error('MongoDB authentication failed. Please check:');
+      console.error('1. Username and password are correct');
+      console.error('2. User has proper permissions');
+    } else if (err.message.includes('ENOTFOUND')) {
+      console.error('MongoDB host not found. Please check:');
+      console.error('1. MongoDB URI is correct');
+      console.error('2. Network connectivity');
     }
     
     // In production, we should not exit immediately - let the app handle gracefully

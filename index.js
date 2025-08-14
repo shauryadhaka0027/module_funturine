@@ -85,15 +85,22 @@ const connectDB = async () => {
   }
 };
 
-// Connect to database
-connectDB();
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/dealers', dealerRoutes);
-app.use('/api/enquiries', enquiryRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/admin', adminRoutes);
+// Connect to database and then set up routes
+connectDB().then(() => {
+  // Routes - only set up after database connection is established
+  app.use('/api/auth', authRoutes);
+  app.use('/api/dealers', dealerRoutes);
+  app.use('/api/enquiries', enquiryRoutes);
+  app.use('/api/products', productRoutes);
+  app.use('/api/admin', adminRoutes);
+  
+  console.log('✓ Routes configured after database connection');
+}).catch((error) => {
+  console.error('✗ Failed to connect to database:', error);
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

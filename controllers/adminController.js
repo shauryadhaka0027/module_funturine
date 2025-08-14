@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Dealer from '../models/Dealer.js';
 import Admin from '../models/Admin.js';
 import Product from '../models/Product.js';
@@ -12,6 +13,13 @@ export const loginAdmin = async (req, res) => {
 
     if (!username || !password) {
       res.status(400).json({ message: 'Username and password are required' });
+      return;
+    }
+
+    // Check if database is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected. ReadyState:', mongoose.connection.readyState);
+      res.status(503).json({ message: 'Database connection not available. Please try again.' });
       return;
     }
 

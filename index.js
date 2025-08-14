@@ -89,14 +89,7 @@ const connectDB = async () => {
       console.error('1. MongoDB URI is correct');
       console.error('2. Network connectivity');
     }
-    
-    // In production, we should not exit immediately - let the app handle gracefully
-    if (process.env.NODE_ENV === 'production') {
-      console.error('Running in production mode - continuing without database connection');
-      console.error('Some features may not work properly');
-    } else {
-      process.exit(1);
-    }
+
   }
 };
 
@@ -192,7 +185,8 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async() => {
+   await connectDB
   console.log(`Server is running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);

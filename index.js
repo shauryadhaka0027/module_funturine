@@ -1,5 +1,5 @@
 import express from 'express';
-import mongoose, { connect } from 'mongoose';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
@@ -52,20 +52,20 @@ app.use(limiter);
 
 // MongoDB Connection with retry mechanism
 const connectDB = async () => {
-  const mongoURI = process.env.MONGODB_URI;
+  const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/moulded-furniture';
   try{
-  
-  if (!mongoURI) {
-    console.error('✗ MONGODB_URI environment variable is not set');
-    throw new Error('MONGODB_URI not configured');
-  }
   
   // If already connected, don't try to connect again
   if (mongoose.connection.readyState === 1) {
     console.log('✓ Already connected to MongoDB');
     return;
   }
-  const connection = await connect(mongoURI)
+  if (!process.env.MONGODB_URI) {
+    console.warn('! MONGODB_URI not set; attempting local MongoDB at mongodb://127.0.0.1:27017/moulded-furniture');
+  }
+  const connection = await mongoose.connect(mongoURI, {
+    serverSelectionTimeoutMS: 5000
+  });
   console.log('✓ Database connected successfully');
   return connection;
 } catch (error) {
@@ -112,24 +112,26 @@ app.get('/api/health', (req, res) => {
 
 
 
-// Start server
-app.listen(PORT, async () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Connect to database after server starts
+// Start server only after initial DB attempt
+const startServer = async () => {
   try {
     await connectDB();
     console.log('✓ Database connection established');
   } catch (error) {
-    console.error('✗ Failed to connect to database:', error);
-    // Don't exit in production, let the app run without DB
+    console.error('✗ Failed initial database connection:', error.message);
     if (process.env.NODE_ENV === 'production') {
       console.log('Continuing without database connection...');
     }
   }
-});
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/api/health`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+};
+
+startServer();
 
 // Keep trying to connect to database periodically
 setInterval(async () => {

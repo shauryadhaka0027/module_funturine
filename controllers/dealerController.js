@@ -62,8 +62,9 @@ export const changeDealerPassword = async (req, res) => {
 
 // Get dealer dashboard stats
 export const getDealerDashboard = async (req, res) => {
+  const dealer = req.dealer;
+  console.log("hshsh",dealer)
   try {
-    const dealer = req.dealer;
     
     // Get enquiry statistics
     const totalEnquiries = await Enquiry.countDocuments({ dealer: dealer._id });

@@ -1,5 +1,5 @@
 import express from 'express';
-import mongoose from 'mongoose';
+import mongoose, { connect } from 'mongoose';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
@@ -51,63 +51,29 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // MongoDB Connection with retry mechanism
-const connectDB = async (retries = 3) => {
+const connectDB = async () => {
   const mongoURI = process.env.MONGODB_URI;
+  try{
   
   if (!mongoURI) {
     console.error('✗ MONGODB_URI environment variable is not set');
     throw new Error('MONGODB_URI not configured');
   }
   
-  console.log('Attempting to connect to MongoDB...');
-  console.log('MongoDB URI:', mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')); // Hide credentials in logs
-  
-  const options = {
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 10000, // Increased timeout to 10 seconds
-    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-    bufferCommands: false, // Disable mongoose buffering
-    retryWrites: true,
-    w: 'majority'
-  };
-  
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      console.log(`Connection attempt ${attempt}/${retries}...`);
-      await mongoose.connect(mongoURI, options);
-      console.log('✓ Successfully connected to MongoDB');
-      console.log('✓ Database:', mongoose.connection.name);
-      console.log('✓ Host:', mongoose.connection.host);
-      return; // Success, exit the function
-    } catch (err) {
-      console.error(`✗ MongoDB connection attempt ${attempt} failed:`, err.message);
-      
-      if (attempt === retries) {
-        // Last attempt failed, throw the error
-        if (err.message.includes('ECONNREFUSED')) {
-          console.error('MongoDB server is not running or not accessible.');
-          console.error('Please check:');
-          console.error('1. MongoDB server is started');
-          console.error('2. MONGODB_URI environment variable is set correctly');
-          console.error('3. Network connectivity to MongoDB server');
-        } else if (err.message.includes('Authentication failed')) {
-          console.error('MongoDB authentication failed. Please check:');
-          console.error('1. Username and password are correct');
-          console.error('2. User has proper permissions');
-        } else if (err.message.includes('ENOTFOUND')) {
-          console.error('MongoDB host not found. Please check:');
-          console.error('1. MongoDB URI is correct');
-          console.error('2. Network connectivity');
-        }
-        throw err;
-      }
-      
-      // Wait before retrying (exponential backoff)
-      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-      console.log(`Waiting ${waitTime}ms before retry...`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
+  // If already connected, don't try to connect again
+  if (mongoose.connection.readyState === 1) {
+    console.log('✓ Already connected to MongoDB');
+    return;
   }
+  const connection = await connect(mongoURI)
+  console.log('✓ Database connected successfully');
+  return connection;
+} catch (error) {
+  console.error('✗ Failed to connect to database:', error);
+  throw error;
+}
+
+
 };
 
 // Set up routes immediately (they will work once DB connects)
@@ -140,58 +106,11 @@ app.get('/api/health', (req, res) => {
 });
 
 // Test endpoint for debugging
-app.post('/api/test-enquiry', (req, res) => {
-  console.log('=== TEST ENQUIRY ENDPOINT ===');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('Body type:', typeof req.body);
-  console.log('Body keys:', Object.keys(req.body || {}));
-  
-  res.json({
-    message: 'Test endpoint working',
-    receivedBody: req.body,
-    headers: req.headers
-  });
-});
 
-// Test admin route
-app.get('/api/admin/test', (req, res) => {
-  res.json({
-    message: 'Admin route is working',
-    timestamp: new Date().toISOString(),
-    routes: ['/api/admin/login', '/api/admin/dashboard', '/api/admin/dealers']
-  });
-});
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error middleware caught:', err);
-  console.error('Error stack:', err.stack);
-  
-  // Check if it's a MongoDB connection error
-  if (err.name === 'MongooseServerSelectionError' || err.message.includes('ECONNREFUSED')) {
-    return res.status(503).json({
-      message: 'Database connection error',
-      error: 'Service temporarily unavailable',
-      suggestion: 'Please try again later or contact support if the issue persists'
-    });
-  }
-  
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
-});
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ 
-    message: 'Route not found',
-    path: req.originalUrl,
-    method: req.method
-  });
-});
+
 
 // Start server
 app.listen(PORT, async () => {
@@ -205,8 +124,25 @@ app.listen(PORT, async () => {
     console.log('✓ Database connection established');
   } catch (error) {
     console.error('✗ Failed to connect to database:', error);
+    // Don't exit in production, let the app run without DB
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Continuing without database connection...');
+    }
   }
 });
+
+// Keep trying to connect to database periodically
+setInterval(async () => {
+  if (mongoose.connection.readyState === 0) {
+    console.log('Attempting to reconnect to database...');
+    try {
+      await connectDB();
+      console.log('✓ Database reconnection successful');
+    } catch (error) {
+      console.error('✗ Database reconnection failed:', error.message);
+    }
+  }
+}, 30000); // Try every 30 seconds
 
 export default app;
 

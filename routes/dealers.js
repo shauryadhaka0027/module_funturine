@@ -20,7 +20,7 @@ router.put('/profile', updateDealerProfile);
 router.put('/change-password', changeDealerPassword);
 
 // Dashboard route
-router.get('/dashboard', dealerAuth, getDealerDashboard);
+router.post('/dashboard', dealerAuth, getDealerDashboard);
 
 // Enquiry routes
 router.get('/enquiries', getDealerEnquiries);

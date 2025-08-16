@@ -63,27 +63,53 @@ export const changeDealerPassword = async (req, res) => {
 // Get dealer dashboard stats
 export const getDealerDashboard = async (req, res) => {
   const dealer = req.dealer;
-  console.log("hshsh",dealer)
+  console.log("[Dealer Dashboard] Dealer object:", dealer);
   try {
-    
-    // Get enquiry statistics
-    const totalEnquiries = await Enquiry.countDocuments({ dealer: dealer._id });
+    console.log("[Dealer Dashboard] Counting total enquiries...");
+    const totalEnquiries = await Enquiry.countDocuments({ dealer: dealer.id });
+    console.log("[Dealer Dashboard] Total enquiries counted:", totalEnquiries);
+
+    console.log("[Dealer Dashboard] Counting pending enquiries...");
     const pendingEnquiries = await Enquiry.countDocuments({ 
-      dealer: dealer._id, 
+      dealer: dealer.id, 
       status: 'pending' 
     });
+    console.log("[Dealer Dashboard] Pending enquiries counted:", pendingEnquiries);
+
+    console.log("[Dealer Dashboard] Counting under process enquiries...");
     const underProcessEnquiries = await Enquiry.countDocuments({ 
-      dealer: dealer._id, 
+      dealer: dealer.id, 
       status: 'under_process' 
     });
+    console.log("[Dealer Dashboard] Under process enquiries counted:", underProcessEnquiries);
+
+    console.log("[Dealer Dashboard] Counting approved enquiries...");
     const approvedEnquiries = await Enquiry.countDocuments({ 
-      dealer: dealer._id, 
+      dealer: dealer.id, 
       status: 'approved' 
     });
+    console.log("[Dealer Dashboard] Approved enquiries counted:", approvedEnquiries);
+
+    console.log("[Dealer Dashboard] Counting rejected enquiries...");
     const rejectedEnquiries = await Enquiry.countDocuments({ 
-      dealer: dealer._id, 
+      dealer: dealer.id, 
       status: 'rejected' 
     });
+    console.log("[Dealer Dashboard] Rejected enquiries counted:", rejectedEnquiries);
+
+    // Fetch all enquiries for the dealer with required fields
+    console.log("[Dealer Dashboard] Fetching all enquiry details for dealer...");
+    const allEnquiries = await Enquiry.find({ dealer: dealer.id })
+      .select('status quantity remarks productCode productName')
+      .lean();
+    const enquiryDetails = allEnquiries.map(e => ({
+      status: e.status,
+      quantity: e.quantity,
+      remarks: e.remarks,
+      productCode: e.productCode,
+      productName: e.productName
+    }));
+    console.log("[Dealer Dashboard] Enquiry details count:", enquiryDetails.length);
 
     const dashboardStats = {
       totalEnquiries,
@@ -92,13 +118,13 @@ export const getDealerDashboard = async (req, res) => {
       approvedEnquiries,
       rejectedEnquiries,
       accountStatus: dealer.status,
-      isFirstTimeUser: dealer.isFirstTimeUser
+      isFirstTimeUser: dealer.isFirstTimeUser,
+      enquiryDetails
     };
-
+    console.log("[Dealer Dashboard] Sending response:", dashboardStats);
     res.json({ dashboardStats });
-
   } catch (error) {
-    console.error('Get dealer dashboard error:', error);
+    console.error('[Dealer Dashboard] Get dealer dashboard error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

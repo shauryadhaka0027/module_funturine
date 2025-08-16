@@ -18,7 +18,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Trust proxy for Vercel deployment
-app.set('trust proxy', true);
+// app.set('trust proxy', true);
 
 // CORS middleware - simplified
 app.use(cors({

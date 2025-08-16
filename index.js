@@ -22,7 +22,7 @@ app.set('trust proxy', true);
 
 // CORS middleware - simplified
 app.use(cors({
-  origin: ['https://admindashboardfurniture.vercel.app', 'http://localhost:3000', 'http://localhost:3001'],
+  origin: ['https://admindashboardfurniture.vercel.app', 'http://localhost:3000', 'http://localhost:3001',"*"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],

@@ -15,7 +15,7 @@ const router = express.Router();
 router.use(dealerAuth);
 
 // Profile routes
-router.get('/profile', getDealerProfile);
+router.post('/profile', getDealerProfile);
 router.put('/profile', updateDealerProfile);
 router.put('/change-password', changeDealerPassword);
 

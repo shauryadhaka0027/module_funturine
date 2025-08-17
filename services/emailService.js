@@ -209,3 +209,43 @@ export const sendEnquiryConfirmationEmail = async (enquiry) => {
   
   return await sendEmail(emailOptions);
 };
+
+// Send OTP by email (generic, for email change, registration, etc.)
+export const sendOtpByEmail = async (email, otp, context = 'Your OTP code') => {
+  const emailOptions = {
+    from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'Your One-Time Password (OTP)',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;"> ${context}</h2>
+        <p>Dear User,</p>
+        <p>Your One-Time Password (OTP) is:</p>
+        <div style="font-size: 2rem; font-weight: bold; letter-spacing: 4px; color: #007bff; margin: 20px 0;">${otp}</div>
+        <p>This OTP is valid for 5 minutes. Please do not share it with anyone.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <p>Best regards,<br>Moulded Furniture Team</p>
+      </div>
+    `
+  };
+  return await sendEmail(emailOptions);
+};
+
+// Send notification email after successful email change
+export const sendEmailChangeSuccessNotification = async (email) => {
+  const emailOptions = {
+    from: `"Moulded Furniture" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'Your Email Has Been Changed Successfully',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #28a745;">Email Change Successful</h2>
+        <p>Dear User,</p>
+        <p>Your email address has been updated successfully in our system.</p>
+        <p>If you did not perform this action, please contact our support team immediately.</p>
+        <p>Best regards,<br>Moulded Furniture Team</p>
+      </div>
+    `
+  };
+  return await sendEmail(emailOptions);
+};

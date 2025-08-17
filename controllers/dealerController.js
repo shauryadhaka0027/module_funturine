@@ -1,4 +1,8 @@
 import Enquiry from '../models/Enquiry.js';
+import Dealer from '../models/Dealer.js';
+import { generateOTP, sendEmailOTP, verifyOTP } from '../services/otpService.js';
+import { sendOtpByEmail } from '../services/emailService.js';
+import Otp from '../models/Otp.js';
 
 // Get dealer profile
 export const getDealerProfile = async (req, res) => {
@@ -180,6 +184,90 @@ export const getDealerEnquiryById = async (req, res) => {
 
   } catch (error) {
     console.error('Get dealer enquiry error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Request change email (send OTP to new email)
+export const requestChangeEmail = async (req, res) => {
+  try {
+    const dealer = req.dealer;
+    const dealerEmail = await Dealer.findOne({ _id: dealer.id });
+    const {newEmail} = req.body;
+
+  
+    console.log("newEmailDatatata",newEmail,req.body);
+ 
+    if (!dealerEmail?.email) {
+      return res.status(400).json({ message: 'Dealer email is required' });
+    }
+    // Check if new email is already in use
+    const existing = await Dealer.findOne({ email:newEmail });
+    if (existing) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
+    const otp = generateOTP(6);
+    const otpData = {
+      email: newEmail,
+      otp: otp,
+      userId: dealer.id
+    }
+    const findOtp = await Otp.findOne({ userId: dealer.id });
+    if (findOtp) {
+      await Otp.updateOne(
+        { userId: dealer.id },
+        { $set: { otp: otp, email: newEmail, expiresAt: new Date(Date.now() + 1 * 60 * 1000) } },
+        { upsert: true }
+      );
+    }else{
+      const optSchema = new Otp(otpData);
+      await optSchema.save();
+
+    }
+
+    await sendOtpByEmail(dealerEmail?.email, otp, 'Your OTP Code for email change');
+
+    // Optionally, store the new email in session or a temp field if needed
+    return res.json({ message: 'OTP sent to new email' });
+  } catch (error) {
+    console.error('Request change email error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Verify OTP and update email
+export const verifyChangeEmailOtp = async (req, res) => {
+  try {
+    const dealer = req.dealer;
+    // const dealerEmail = await Dealer.findOne({ _id: dealer.id });
+    const {otp} = req.body;
+    const optSchema = await Otp.findOne({ userId: dealer.id, otp: otp });
+    if (!optSchema) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+    if (optSchema.expiresAt < Date.now()) {
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+    if (!otp) {
+      return res.status(400).json({ message: 'OTP is required' });
+    }
+    // Verify OTP
+    // const { valid, message } = verifyOTP(dealerEmail.email, otp);
+    // if (!valid) {
+    //   return res.status(400).json({ message });
+    // }
+    // Check if new email is already in use (again, for safety)
+    const existing = await Dealer.findOne({ email: optSchema?.email });
+    if (existing) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
+    dealer.email = optSchema?.email;
+    dealer.isEmailVerified = true;
+    await dealer.save();
+
+    return res.json({ message: 'Email updated successfully', dealer: dealer.getPublicProfile() });
+  } catch (error) {
+    console.error('Verify change email OTP error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

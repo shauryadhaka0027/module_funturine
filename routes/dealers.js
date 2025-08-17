@@ -5,7 +5,9 @@ import {
   changeDealerPassword,
   getDealerDashboard,
   getDealerEnquiries,
-  getDealerEnquiryById
+  getDealerEnquiryById,
+  requestChangeEmail,
+  verifyChangeEmailOtp
 } from '../controllers/dealerController.js';
 import { dealerAuth } from '../middleware/auth.js';
 
@@ -25,5 +27,9 @@ router.post('/dashboard', dealerAuth, getDealerDashboard);
 // Enquiry routes
 router.get('/enquiries', getDealerEnquiries);
 router.get('/enquiries/:id', getDealerEnquiryById);
+
+// Change email routes
+router.post('/change-email/request', dealerAuth, requestChangeEmail);
+router.post('/change-email/verify', dealerAuth, verifyChangeEmailOtp);
 
 export default router;

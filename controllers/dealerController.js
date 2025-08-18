@@ -42,11 +42,31 @@ export const updateDealerProfile = async (req, res) => {
 // Change password
 export const changeDealerPassword = async (req, res) => {
   try {
+    console.log('[changeDealerPassword] Request body:', req.body);
     const { currentPassword, newPassword } = req.body;
     const dealer = req.dealer;
+    console.log('[changeDealerPassword] Dealer from req:', dealer);
 
-    // Verify current password
-    const isCurrentPasswordValid = await dealer.comparePassword(currentPassword);
+    if (!dealer) {
+      console.error('[changeDealerPassword] Dealer not found on request object');
+      res.status(400).json({ message: 'Dealer not found' });
+      return;
+    }
+
+    // Extra log before password comparison
+    console.log('[changeDealerPassword] About to compare current password...');
+    let isCurrentPasswordValid;
+    try {
+      isCurrentPasswordValid = await dealer.comparePassword(currentPassword);
+      console.log('[changeDealerPassword] isCurrentPasswordValid:', isCurrentPasswordValid);
+    } catch (err) {
+      console.error('[changeDealerPassword] Error during comparePassword:', err);
+      res.status(500).json({ message: 'Error verifying current password', error: err.message });
+      return;
+    }
+    // Extra log after password comparison
+    console.log('[changeDealerPassword] Finished password comparison. Result:', isCurrentPasswordValid);
+
     if (!isCurrentPasswordValid) {
       res.status(400).json({ message: 'Current password is incorrect' });
       return;
@@ -54,7 +74,14 @@ export const changeDealerPassword = async (req, res) => {
 
     // Update password
     dealer.password = newPassword;
-    await dealer.save();
+    try {
+      await dealer.save();
+      console.log('[changeDealerPassword] Password updated and saved successfully');
+    } catch (err) {
+      console.error('[changeDealerPassword] Error saving new password:', err);
+      res.status(500).json({ message: 'Error saving new password' });
+      return;
+    }
 
     res.json({ message: 'Password changed successfully' });
 

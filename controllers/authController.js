@@ -281,13 +281,13 @@ export const loginDealer = async (req, res) => {
 
     const dealer = await Dealer.findOne({ gst: gst.toUpperCase() }).select('+password');
     if (!dealer) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid GST number' });
       return;
     }
 
     const isPasswordValid = await dealer.comparePassword(password);
     if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Incorrect password' });
       return;
     }
 

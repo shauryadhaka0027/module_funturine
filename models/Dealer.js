@@ -48,6 +48,12 @@ const dealerSchema = new Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  pinCode: {
+    type: String,
+    required: [true, 'Pin code is required'],
+    minlength: [6, 'Pin code must be at least 6 digits'],
+    maxlength: [6, 'Pin code must be at most 6 digits']
+  },
   isFirstTimeUser: {
     type: Boolean,
     default: true

@@ -7,7 +7,8 @@ import {
   getDealerEnquiries,
   getDealerEnquiryById,
   requestChangeEmail,
-  verifyChangeEmailOtp
+  verifyChangeEmailOtp,
+  logoutDealer
 } from '../controllers/dealerController.js';
 import { dealerAuth } from '../middleware/auth.js';
 

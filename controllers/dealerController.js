@@ -298,3 +298,18 @@ export const verifyChangeEmailOtp = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Logout dealer
+export const logoutDealer = async (req, res) => {
+  try {
+    // Since JWT tokens are stateless, we just return a success response
+    // The client should remove the token from storage
+    res.json({ 
+      message: 'Logged out successfully',
+      success: true 
+    });
+  } catch (error) {
+    console.error('Logout dealer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

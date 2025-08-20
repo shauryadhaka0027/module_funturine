@@ -33,4 +33,7 @@ router.get('/enquiries/:id', getDealerEnquiryById);
 router.post('/change-email/request', dealerAuth, requestChangeEmail);
 router.post('/change-email/verify', dealerAuth, verifyChangeEmailOtp);
 
+// Logout route
+router.post('/logout', logoutDealer);
+
 export default router;

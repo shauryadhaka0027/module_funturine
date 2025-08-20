@@ -8,7 +8,7 @@ import { generateOTP, sendSMSOTP, sendEmailOTP, verifyOTP } from '../services/ot
 
 // Dealer Registration (Simplified - no OTP)
 export const registerDealer = async (req, res) => {
-  const { companyName, contactPersonName, mobile, email, address, gst, password } = req.body;
+  const { companyName, contactPersonName, mobile, email, address, pinCode, gst, password } = req.body;
 
   console.log("=== DEALER REGISTRATION DEBUG ===");
   console.log("Request body:", JSON.stringify(req.body, null, 2));
@@ -18,11 +18,11 @@ export const registerDealer = async (req, res) => {
   console.log("- mobile:", mobile ? "✓" : "✗ MISSING");
   console.log("- email:", email ? "✓" : "✗ MISSING");
   console.log("- address:", address ? "✓" : "✗ MISSING");
+  console.log("- pinCode:", pinCode ? "✓" : "✗ MISSING");
   console.log("- gst:", gst ? "✓" : "✗ MISSING");
   console.log("- password:", password ? "✓" : "✗ MISSING");
+  
   try {
-   
-
     // Validate required fields
     const missingFields = [];
     if (!companyName) missingFields.push('companyName');
@@ -30,15 +30,20 @@ export const registerDealer = async (req, res) => {
     if (!mobile) missingFields.push('mobile');
     if (!email) missingFields.push('email');
     if (!address) missingFields.push('address');
+    if (!pinCode) missingFields.push('pinCode');
     if (!gst) missingFields.push('gst');
     if (!password) missingFields.push('password');
 
     if (missingFields.length > 0) {
       console.log("✗ Missing required fields:", missingFields);
       return res.status(400).json({
+        success: false,
         message: 'Missing required fields',
-        missingFields: missingFields,
-        error: 'VALIDATION_ERROR'
+        data: null,
+        errors: {
+          missingFields: missingFields
+        },
+        errorCode: 'VALIDATION_ERROR'
       });
     }
 
@@ -55,13 +60,17 @@ export const registerDealer = async (req, res) => {
         gst: existingDealer.gst === gst
       });
       return res.status(400).json({ 
+        success: false,
         message: 'Dealer with this email, mobile, or GST already exists',
-        error: 'DUPLICATE_DEALER',
-        conflictFields: {
-          email: existingDealer.email === email,
-          mobile: existingDealer.mobile === mobile,
-          gst: existingDealer.gst === gst
-        }
+        data: null,
+        errors: {
+          conflictFields: {
+            email: existingDealer.email === email,
+            mobile: existingDealer.mobile === mobile,
+            gst: existingDealer.gst === gst
+          }
+        },
+        errorCode: 'DUPLICATE_DEALER'
       });
     }
 
@@ -74,6 +83,7 @@ export const registerDealer = async (req, res) => {
       mobile,
       email,
       address,
+      pinCode,
       gst,
       password,
       status: 'pending',
@@ -86,10 +96,13 @@ export const registerDealer = async (req, res) => {
     console.log("✓ Dealer created successfully with ID:", dealer._id);
 
     res.status(201).json({
+      success: true,
       message: 'Registration submitted successfully. Please wait for admin approval.',
-      dealerId: dealer._id,
-      dealer: dealer.getPublicProfile(),
-      success: true
+      data: {
+        dealerId: dealer._id,
+        dealer: dealer.getPublicProfile()
+      },
+      errors: null
     });
 
   } catch (error) {
@@ -103,9 +116,11 @@ export const registerDealer = async (req, res) => {
       }));
       
       return res.status(400).json({
+        success: false,
         message: 'Validation failed',
+        data: null,
         errors: validationErrors,
-        error: 'MONGOOSE_VALIDATION_ERROR'
+        errorCode: 'MONGOOSE_VALIDATION_ERROR'
       });
     }
     
@@ -113,16 +128,25 @@ export const registerDealer = async (req, res) => {
     if (error.code === 11000) {
       const duplicateField = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
+        success: false,
         message: `A dealer with this ${duplicateField} already exists`,
-        error: 'DUPLICATE_KEY_ERROR',
-        field: duplicateField
+        data: null,
+        errors: {
+          field: duplicateField
+        },
+        errorCode: 'DUPLICATE_KEY_ERROR'
       });
     }
 
     res.status(500).json({ 
+      success: false,
       message: 'Server error', 
-      error: error.message,
-      type: error.name
+      data: null,
+      errors: {
+        message: error.message,
+        type: error.name
+      },
+      errorCode: 'SERVER_ERROR'
     });
   }
 };
@@ -281,29 +305,51 @@ export const loginDealer = async (req, res) => {
 
     const dealer = await Dealer.findOne({ gst: gst.toUpperCase() }).select('+password');
     if (!dealer) {
-      res.status(401).json({ message: 'Invalid GST number' });
+      res.status(401).json({ 
+        success: false,
+        message: 'Invalid GST number',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_CREDENTIALS'
+      });
       return;
     }
 
     const isPasswordValid = await dealer.comparePassword(password);
     if (!isPasswordValid) {
-      res.status(401).json({ message: 'Incorrect password' });
+      res.status(401).json({ 
+        success: false,
+        message: 'Incorrect password',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_CREDENTIALS'
+      });
       return;
     }
 
     if (dealer.status !== 'approved') {
       res.status(403).json({ 
+        success: false,
         message: 'Account not approved. Please wait for admin approval.',
-        status: dealer.status
+        data: {
+          status: dealer.status
+        },
+        errors: null,
+        errorCode: 'ACCOUNT_NOT_APPROVED'
       });
       return;
     }
 
     if (!dealer.isMobileVerified || !dealer.isEmailVerified) {
       res.status(403).json({ 
+        success: false,
         message: 'Please complete OTP verification first.',
-        needsVerification: true,
-        dealerId: dealer._id
+        data: {
+          needsVerification: true,
+          dealerId: dealer._id
+        },
+        errors: null,
+        errorCode: 'VERIFICATION_REQUIRED'
       });
       return;
     }
@@ -316,14 +362,26 @@ export const loginDealer = async (req, res) => {
     });
 
     res.json({
+      success: true,
       message: 'Login successful',
-      token,
-      dealer: dealer.getPublicProfile()
+      data: {
+        token,
+        dealer: dealer.getPublicProfile()
+      },
+      errors: null
     });
 
   } catch (error) {
     console.error('Dealer login error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
   }
 };
 
@@ -334,13 +392,25 @@ export const loginAdmin = async (req, res) => {
 
     const admin = await Admin.findOne({ email }).select('+password');
     if (!admin) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ 
+        success: false,
+        message: 'Invalid credentials',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_CREDENTIALS'
+      });
       return;
     }
 
     const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ 
+        success: false,
+        message: 'Invalid credentials',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_CREDENTIALS'
+      });
       return;
     }
 
@@ -352,14 +422,26 @@ export const loginAdmin = async (req, res) => {
     });
 
     res.json({
+      success: true,
       message: 'Login successful',
-      token,
-      admin: admin.getPublicProfile()
+      data: {
+        token,
+        admin: admin.getPublicProfile()
+      },
+      errors: null
     });
 
   } catch (error) {
     console.error('Admin login error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
   }
 };
 
@@ -370,7 +452,13 @@ export const forgotPassword = async (req, res) => {
 
     const dealer = await Dealer.findOne({ gst: gst.toUpperCase() });
     if (!dealer) {
-      res.status(404).json({ message: 'Dealer not found' });
+      res.status(404).json({ 
+        success: false,
+        message: 'Dealer not found',
+        data: null,
+        errors: null,
+        errorCode: 'DEALER_NOT_FOUND'
+      });
       return;
     }
 
@@ -384,15 +472,34 @@ export const forgotPassword = async (req, res) => {
     // Send reset email (using dealer's email from the found record)
     const emailSent = await sendPasswordResetEmail(dealer.email, resetToken, dealer.companyName);
     if (!emailSent) {
-      res.status(500).json({ message: 'Failed to send reset email' });
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send reset email',
+        data: null,
+        errors: null,
+        errorCode: 'EMAIL_SEND_FAILED'
+      });
       return;
     }
 
-    res.json({ message: 'Password reset email sent successfully to your registered email address' });
+    res.json({ 
+      success: true,
+      message: 'Password reset email sent successfully to your registered email address',
+      data: null,
+      errors: null
+    });
 
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
   }
 };
 
@@ -407,7 +514,13 @@ export const resetPassword = async (req, res) => {
     });
 
     if (!dealer) {
-      res.status(400).json({ message: 'Invalid or expired reset token' });
+      res.status(400).json({ 
+        success: false,
+        message: 'Invalid or expired reset token',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_RESET_TOKEN'
+      });
       return;
     }
 
@@ -417,11 +530,24 @@ export const resetPassword = async (req, res) => {
 
     await dealer.save();
 
-    res.json({ message: 'Password reset successfully' });
+    res.json({ 
+      success: true,
+      message: 'Password reset successfully',
+      data: null,
+      errors: null
+    });
 
   } catch (error) {
     console.error('Reset password error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
   }
 };
 

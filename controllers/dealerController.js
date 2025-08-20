@@ -305,11 +305,21 @@ export const logoutDealer = async (req, res) => {
     // Since JWT tokens are stateless, we just return a success response
     // The client should remove the token from storage
     res.json({ 
+      success: true,
       message: 'Logged out successfully',
-      success: true 
+      data: null,
+      errors: null
     });
   } catch (error) {
     console.error('Logout dealer error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
   }
 };

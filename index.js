@@ -20,9 +20,25 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 // Trust proxy for Vercel deployment
 // app.set('trust proxy', true);
 
-// CORS middleware - simplified
+// CORS middleware - improved for Vercel
 app.use(cors({
-  origin: ['https://admindashboardfurniture.vercel.app', 'http://localhost:5173', 'http://localhost:3001',"*"],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://admindashboardfurniture.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3001',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
@@ -32,12 +48,26 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Debug middleware to log all requests
+// Favicon handler to prevent Vercel bot issues
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // No content response
+});
+
+// Debug middleware to log all requests (filtered for Vercel bots)
 app.use((req, res, next) => {
+  // Skip logging for Vercel bot requests
+  if (req.headers['x-vercel-internal-bot-name'] || req.path === '/favicon.ico') {
+    return next();
+  }
+  
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  console.log('Request headers:', req.headers);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Request body:', req.body);
+  
+  // Only log headers for non-bot requests
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Request headers:', req.headers);
+    if (req.body && Object.keys(req.body).length > 0) {
+      console.log('Request body:', req.body);
+    }
   }
   next();
 });
@@ -86,6 +116,24 @@ app.use('/api/admin', adminRoutes);
 console.log('✓ Routes configured');
 
 
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Moulded Furniture API',
+    version: '2.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      dealers: '/api/dealers',
+      enquiries: '/api/enquiries',
+      products: '/api/products',
+      admin: '/api/admin'
+    }
+  });
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

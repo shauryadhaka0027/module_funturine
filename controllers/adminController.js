@@ -506,3 +506,84 @@ export const changeAdminPassword = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Validate admin token
+export const validateToken = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided',
+        data: null,
+        errors: null,
+        errorCode: 'NO_TOKEN'
+      });
+    }
+
+    // Import verifyToken function
+    const { verifyToken } = await import('../utils/jwt.js');
+    
+    try {
+      const decoded = verifyToken(token);
+      
+      // Check if admin still exists and is active
+      const admin = await Admin.findById(decoded.userId);
+      
+      if (!admin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Admin not found',
+          data: null,
+          errors: null,
+          errorCode: 'ADMIN_NOT_FOUND'
+        });
+      }
+
+      if (!admin.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: 'Admin account is deactivated',
+          data: null,
+          errors: null,
+          errorCode: 'ACCOUNT_DEACTIVATED'
+        });
+      }
+
+      // Token is valid and admin is active
+      return res.json({
+        success: true,
+        message: 'Token is valid',
+        data: {
+          admin: admin.getPublicProfile(),
+          tokenValid: true
+        },
+        errors: null
+      });
+
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+        data: null,
+        errors: {
+          message: jwtError.message
+        },
+        errorCode: 'INVALID_TOKEN'
+      });
+    }
+
+  } catch (error) {
+    console.error('Validate token error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
+  }
+};

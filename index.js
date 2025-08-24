@@ -18,7 +18,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Trust proxy for Vercel deployment
-app.set('trust proxy', 1);
+// app.set('trust proxy', true);
 
 // CORS middleware - improved for Vercel
 app.use(cors({
@@ -73,12 +73,12 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting
-// const limiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10), // limit each IP to 100 requests per windowMs
-//   message: 'Too many requests from this IP, please try again later.'
-// });
-// app.use(limiter);
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10), // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use(limiter);
 
 // MongoDB Connection with retry mechanism
 const connectDB = async () => {

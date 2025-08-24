@@ -30,7 +30,7 @@ app.use(cors({
       'https://admindashboardfurniture.vercel.app',
       'http://localhost:5173',
       'http://localhost:3001',
-      'http://localhost:3000'
+    
     ];
     
     if (allowedOrigins.indexOf(origin) !== -1) {

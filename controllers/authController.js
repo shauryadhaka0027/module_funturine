@@ -364,8 +364,8 @@ export const loginDealer = async (req, res) => {
     res.json({
       success: true,
       message: 'Login successful',
+      token,
       data: {
-        token,
         dealer: dealer.getPublicProfile()
       },
       errors: null

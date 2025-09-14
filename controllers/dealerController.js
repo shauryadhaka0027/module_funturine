@@ -1,8 +1,9 @@
 import Enquiry from '../models/Enquiry.js';
 import Dealer from '../models/Dealer.js';
 import { generateOTP, sendEmailOTP, verifyOTP } from '../services/otpService.js';
-import { sendOtpByEmail } from '../services/emailService.js';
+import { sendOtpByEmail, sendPasswordResetEmail } from '../services/emailService.js';
 import Otp from '../models/Otp.js';
+import crypto from 'crypto';
 
 // Get dealer profile
 export const getDealerProfile = async (req, res) => {
@@ -313,6 +314,236 @@ export const logoutDealer = async (req, res) => {
   } catch (error) {
     console.error('Logout dealer error:', error);
     res.status(500).json({ 
+      success: false,
+      message: 'Server error',
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
+  }
+};
+
+// Forgot password - send OTP to dealer's email
+export const forgotDealerPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+        data: null,
+        errors: null,
+        errorCode: 'VALIDATION_ERROR'
+      });
+    }
+
+    const dealer = await Dealer.findOne({ email: email });
+    if (!dealer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Dealer not found with this email address',
+        data: null,
+        errors: null,
+        errorCode: 'DEALER_NOT_FOUND'
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP(6);
+    const otpData = {
+      email: dealer.email,
+      otp: otp,
+      userId: dealer._id,
+      type: 'password_reset'
+    };
+
+    // Check if OTP already exists for this dealer
+    const existingOtp = await Otp.findOne({ userId: dealer._id, type: 'password_reset' });
+    if (existingOtp) {
+      await Otp.updateOne(
+        { userId: dealer._id, type: 'password_reset' },
+        { 
+          $set: { 
+            otp: otp, 
+            email: dealer.email, 
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+          } 
+        }
+      );
+    } else {
+      const otpSchema = new Otp(otpData);
+      otpSchema.expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await otpSchema.save();
+    }
+
+    // Send OTP via email
+    const emailSent = await sendOtpByEmail(dealer.email, otp, 'Password Reset OTP');
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP email',
+        data: null,
+        errors: null,
+        errorCode: 'EMAIL_SEND_FAILED'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'OTP sent to your registered email address',
+      data: {
+        dealerId: dealer._id
+      },
+      errors: null
+    });
+
+  } catch (error) {
+    console.error('Forgot dealer password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
+  }
+};
+
+// Verify OTP for password reset
+export const verifyDealerOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required',
+        data: null,
+        errors: null,
+        errorCode: 'VALIDATION_ERROR'
+      });
+    }
+    const dealer = await Dealer.findOne({ email: email });
+    if (!dealer) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dealer not found with this email address',
+        data: null,
+        errors: null,
+        errorCode: 'DEALER_NOT_FOUND'
+      });
+    }
+
+    const otpRecord = await Otp.findOne({ 
+      userId: dealer._id, 
+      otp: otp, 
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_OTP'
+      });
+    }
+
+    if (otpRecord.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired',
+        data: null,
+        errors: null,
+        errorCode: 'OTP_EXPIRED'
+      });
+    }
+
+    // Generate reset token for password reset
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Update dealer with reset token
+    await Dealer.findByIdAndUpdate(dealer._id, {
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+    });
+
+    // Delete the OTP record
+    await Otp.deleteOne({ _id: otpRecord._id });
+
+    res.json({
+      success: true,
+      message: 'OTP verified successfully',
+      data: {
+        resetToken: resetToken
+      },
+      errors: null
+    });
+
+  } catch (error) {
+    console.error('Verify dealer OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      data: null,
+      errors: {
+        message: error.message
+      },
+      errorCode: 'SERVER_ERROR'
+    });
+  }
+};
+
+// Reset password using token
+export const resetDealerPassword = async (req, res) => {
+  try {
+    const { newPassword ,email} = req.body;
+
+    if ( !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: ' new password are required',
+        data: null,
+        errors: null,
+        errorCode: 'VALIDATION_ERROR'
+      });
+    }
+
+    const dealer = await Dealer.findOne({
+      email: email,
+    });
+
+    if (!dealer) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token',
+        data: null,
+        errors: null,
+        errorCode: 'INVALID_RESET_TOKEN'
+      });
+    }
+
+    // Update password
+    dealer.password = newPassword;
+  
+
+    await dealer.save();
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully',
+      data: null,
+      errors: null
+    });
+
+  } catch (error) {
+    console.error('Reset dealer password error:', error);
+    res.status(500).json({
       success: false,
       message: 'Server error',
       data: null,

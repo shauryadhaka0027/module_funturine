@@ -17,11 +17,19 @@ const productSchema = new Schema({
     type: String,
     required: [true, 'Product category is required'],
     enum: [
-      'Chair',
-      'Table', 
-      'Kids Chair & Table',
-      'Set of Table & Chair',
-      '3 Year Warranty Chair'
+      'Chairs',
+      'Tables', 
+      'Kids Tange',
+      'Stools',
+      'Set of Chair & Table',
+    ]
+  },
+  subCategory: {
+    type: String,
+    enum: [
+      'Low Back Chair','W/O Arm Chair','Premium Chair Glossy','Premium Chair Matt Glossy','Warranty Chair Premium',
+      'Mid Back Chair', 'High Back Chair','Square Back Chair','Square Back Chair','Double Color Back Chair',
+      'Chair','Table','FixTable','FoldingTable',
     ]
   },
   description: {

@@ -1,5 +1,29 @@
 import mongoose, { Schema } from 'mongoose';
 
+// Define subcategories for each category
+const SUB_CATEGORIES = {
+  'Chairs': [
+    'Low Back Chair',
+    'W/O Arm Chair',
+    'Premium Chair Glossy',
+    'Premium Chair Matt Glossy',
+    'Warranty Chair Premium',
+    'Mid Back Chair',
+    'High Back Chair',
+    'Square Back Chair',
+    'Double Color Back Chair'
+  ],
+  'Tables': [
+    'FixTable',
+    'FoldingTable'
+  ],
+  'Kids Tange': [
+    'Chair',
+    'Table'
+  ],
+  'Stools': [],
+  'Set of Chair & Table': []
+};
 
 const productSchema = new Schema({
   productCode: {
@@ -16,21 +40,25 @@ const productSchema = new Schema({
   category: {
     type: String,
     required: [true, 'Product category is required'],
-    enum: [
-      'Chairs',
-      'Tables', 
-      'Kids Tange',
-      'Stools',
-      'Set of Chair & Table',
-    ]
+    enum: Object.keys(SUB_CATEGORIES)
   },
   subCategory: {
     type: String,
-    enum: [
-      'Low Back Chair','W/O Arm Chair','Premium Chair Glossy','Premium Chair Matt Glossy','Warranty Chair Premium',
-      'Mid Back Chair', 'High Back Chair','Square Back Chair','Square Back Chair','Double Color Back Chair',
-      'Chair','Table','FixTable','FoldingTable',
-    ]
+    trim: true,
+    validate: {
+      validator: function(v) {
+        // If no subcategory is provided
+        if (!v) {
+          // Check if category requires subcategory
+          const categorySubCategories = SUB_CATEGORIES[this.category];
+          return !categorySubCategories || categorySubCategories.length === 0;
+        }
+        // If subcategory is provided, validate it belongs to the category
+        const categorySubCategories = SUB_CATEGORIES[this.category];
+        return categorySubCategories && categorySubCategories.includes(v);
+      },
+      message: 'Invalid subcategory for the selected category'
+    }
   },
   description: {
     type: String,
@@ -75,7 +103,8 @@ const productSchema = new Schema({
 });
 
 // Index for better search performance
-productSchema.index({ category: 1, isActive: 1 });
+productSchema.index({ category: 1, subCategory: 1, isActive: 1 });
 productSchema.index({ productName: 'text' });
 
+export { SUB_CATEGORIES };
 export default mongoose.model('Product', productSchema);
